@@ -10,8 +10,13 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 #include <dirent.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <cerrno>
 #include <vector>
 #include <list>
 #include <map>
@@ -40,6 +45,7 @@
 #include <RobotGVINS_GNSSSat.h>
 #include <RobotGVINS_GNSSObs.h>
 #include <RobotGVINS_GNSSEph.h>
+#include <RobotGVINS_GTINSSol.h>
 #include <GVINS_GNSSMeasMsg.h>
 #include <GVINS_GNSSObsMsg.h>
 #include <GVINS_GNSSPVTSolnMsg.h>
@@ -95,6 +101,11 @@ namespace dataio_common
     // ros standard
     static std::string ROS_gnsssol_topic = "/rosstd/gnsssol";
 
+    // Intel D457
+    static std::string IntelD457_compressimage_topic = "/camera/color/image_raw/compressed";
+    static std::string IntelD457_image_topic = "/camera/color/image_raw";
+    static std::string IntelD457_imu_topic = "/camera/imu";
+
     // Vision-RTK2
     static std::string VisionRTK2_imu_topic = "/imu/data";
     static std::string VisionRTK2_image_topic = "/camera/lowres/image";
@@ -109,11 +120,13 @@ namespace dataio_common
     // RobotGVINS
     static std::string RobotGVINS_imu_topic = "/imu/data";
     static std::string RobotGVINS_image_topic = "/image/data";
+    static std::string RobotGVINS_colorimage_topic = "/image/color";
     static std::string RobotGVINS_gnsssol_topic = "/gnss/solution";
     static std::string RobotGVINS_gnssobs_topic_rove = "/gnss/obs/rove";
     static std::string RobotGVINS_gnssobs_topic_base = "/gnss/obs/base";
     static std::string RobotGVINS_gnsseph_topic_rove = "/gnss/eph/rove";
     static std::string RobotGVINS_gnsseph_topic_base = "/gnss/eph/base";
+    static std::string RobotGVINS_gtsol_topic = "/gt/solution";
 }
 
 /**********************************************************************************************************************************
@@ -128,14 +141,25 @@ namespace dataio_common
      */
     struct Solution_INS
     {
-        int gps_week;         // GPS week
-        double gps_second;    // GPS second (s)
-        double timestamp;     // GPS timestamp (s)
-        double position[3];   // ECEF(m)/ENU(m)/BLH(rad/rad/m)
-        double velocity[3];   // ECEF(m/s)/ENU(m/s)
-        double attitude[3];   // Heading, Pitch, Roll (rad) NOTE: Azimuth or Attitude
-        double rotation[9];   // NOTE: the src frame and dst frame
-        double quaternion[4]; // xyzw NOTE: the src frame and dst frame (be consistent with rotation)
+        int gps_week;              // GPS week
+        double gps_second;         // GPS second (s)
+        double timestamp;          // GPS timestamp (s)
+        double pubtime;            // timestamp to publish ros message
+        double position_LLH[3];    // BLH(rad/rad/m)
+        double position_XYZ[3];    // ECEF(m)
+        double position_ENU[3];    // ENU(m)
+        double velocity_XYZ[3];    // ECEF(m/s)
+        double velocity_ENU[3];    // ENU(m/s)
+        double attitude_Azi[3];    // Heading, Pitch, Roll (rad) NOTE: Azimuth
+        double attitude_Att[3];    // Heading, Pitch, Roll (rad) NOTE: Attitude
+        double positioncov_XYZ[9]; // ECEF(m2)/ENU(m2)
+        double positioncov_ENU[9]; // ENU(m2)
+        double velocitycov_XYZ[9]; // ECEF(m2/s2)/ENU(m2/s2)
+        double velocitycov_ENU[9]; // ECEF(m2/s2)
+        double rotation[9];        // NOTE: the src frame and dst frame
+        double quaternion[4];      // xyzw NOTE: the src frame and dst frame (be consistent with rotation)
+        int satnum[6];             // ALL/GPS/GLO/BDS/GAL/QZSS
+        double DOP[3];             // HDOP/VDOP/PDOP
 
         Solution_INS()
         {
@@ -145,9 +169,18 @@ namespace dataio_common
 
             for (int i = 0; i < 3; i++)
             {
-                position[i] = 0.0;
-                velocity[i] = 0.0;
-                attitude[i] = 0.0;
+                position_XYZ[i] = 0.0;
+                position_ENU[i] = 0.0;
+                position_LLH[i] = 0.0;
+                velocity_XYZ[i] = 0.0;
+                velocity_ENU[i] = 0.0;
+            }
+            for (int i = 0; i < 9; i++)
+            {
+                positioncov_XYZ[i] = 0.0;
+                positioncov_ENU[i] = 0.0;
+                velocitycov_XYZ[i] = 0.0;
+                velocitycov_ENU[i] = 0.0;
             }
             for (int i = 0; i < 4; i++)
             {
@@ -157,6 +190,10 @@ namespace dataio_common
             {
                 rotation[i] = 0.0;
             }
+            for (int i = 0; i < 6; i++)
+                satnum[i] = 0;
+            for (int i = 0; i < 3; i++)
+                DOP[i] = 0.0;
         }
     };
 

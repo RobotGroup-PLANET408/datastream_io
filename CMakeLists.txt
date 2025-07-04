@@ -69,6 +69,7 @@ add_message_files(
   RobotGVINS_GNSSSat.msg
   RobotGVINS_GNSSObs.msg
   RobotGVINS_GNSSEph.msg
+  RobotGVINS_GTINSSol.msg
   GVINS_GNSSMeasMsg.msg
   GVINS_GNSSObsMsg.msg
   GVINS_GNSSPVTSolnMsg.msg

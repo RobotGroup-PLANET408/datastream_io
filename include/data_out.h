@@ -25,7 +25,7 @@ namespace dataio_common
     /**
      * @brief       Write INS solution data
      */
-    extern bool Write_INSSolution(const char *output_filepath, const std::list<Solution_INS> &sol_datas, dataformat datatype);
+    extern bool Write_INSSolution(const char *output_filepath, const std::list<Solution_INS> &sol_datas, const dataformat datatype, const std::string sol_topic, const std::string imu_topic, const int filetype, const int filemode);
 
     /**
      * @brief       Write GNSS solution data to rosbag file

@@ -28,6 +28,7 @@ namespace dataio_common
      * @brief       Extract image data from bag file
      */
     extern bool Extract_ImageData_ROSBag(const char *bag_infilepath, const std::string &img_topic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys);
+    extern bool Extract_CompressedImageData_ROSBag(const char *bag_infilepath, const std::string &img_topic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys);
 
     /**
      * @brief       Extract INS solution data

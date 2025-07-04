@@ -265,14 +265,7 @@ namespace gnss_common
 
         IPS_OBSDATA()
         {
-            gt.GPSWeek = -1;
-            gt.secsOfWeek = -1;
-            gt.fracOfSec = 0.0;
-            pubtime = 0.0;
-            nsat = 0;
-            flag = 0;
-            for (int i = 0; i < IPS_NSYS; i++)
-                ngnss[i] = 0;
+            ZeroStruct(*this, IPS_OBSDATA);
         }
     };
 

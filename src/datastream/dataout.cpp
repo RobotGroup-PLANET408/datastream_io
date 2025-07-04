@@ -618,43 +618,136 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Write INS solution data as TUM format
-     * @note
+     * @brief       Write INS solution data to file
+     * @note        1. For the bag file, the start and end time are determined by imu data,
+     *                 and the solution data within this time period will be added to bag
      *
      * @param[in]   char*           output_filepath      filepath to write data
      * @param[in]   list            sol_datas            INS solution data
      * @param[in]   dataformat      datatype             data type
+     * @param[in]   string          rostopic             ros topic for bag file
+     * @param[in]   int             filetype             0: txt file | 1: bag file
+     * @param[in]   int             filemode             0: write | 1: app
      *
      * @return      bool       true       write successful
      *                         false      fail to write
      */
-    extern bool Write_INSSolution(const char *output_filepath, const std::list<Solution_INS> &sol_datas, dataformat datatype)
+    extern bool Write_INSSolution(const char *output_filepath, const std::list<Solution_INS> &sol_datas, const dataformat datatype, const std::string sol_topic, const std::string imu_topic, const int filetype, const int filemode)
     {
-        // 1. Open file to write ground-truth data
-        FILE *outfile = fopen(output_filepath, "wt");
-        if (outfile == NULL)
+        // 0. Get the start and end time of imu message (For bag file)
+        ros::Time start_time(0.0), end_time(0.0);
+        if (filetype == 1 && filemode == 1)
         {
-            printf("open output data file unsuccessfully!\n");
+            // open the bag file
+            rosbag::Bag infile_bag;
+            infile_bag.open(output_filepath, rosbag::bagmode::Read);
+            if (!infile_bag.isOpen())
+            {
+                printf("open ros bag file to get start and end time unsuccessfully!\n");
+                return false;
+            }
+
+            // prepare variables
+            bool first_imu = true; // the flag to check first message
+
+            std::vector<std::string> topics;
+            topics.push_back(std::string(imu_topic));
+            rosbag::View view(infile_bag, rosbag::TopicQuery(topics));
+            foreach (rosbag::MessageInstance const m, view)
+            {
+                if (m.instantiate<sensor_msgs::Imu>() != nullptr)
+                {
+                    // get one imu message
+                    sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
+                    double timestamp = imu_msg->header.stamp.sec + imu_msg->header.stamp.nsec * 1e-9;
+
+                    // record the start time only once
+                    if (first_imu)
+                    {
+                        start_time = ros::Time(timestamp);
+                        first_imu = false;
+                    }
+                    // record the end time
+                    end_time = ros::Time(timestamp);
+                }
+            }
+
+            // need to close the file
+            infile_bag.close();
+
+            // check the start time and end time
+            if (start_time <= ros::Time(0.0) || end_time <= ros::Time(0.0) || end_time <= start_time)
+            {
+                printf("the start and end time is abnormal!\n");
+                return false;
+            }
+        }
+
+        // 1. Open file to write ground-truth data
+        FILE *outfile = nullptr; // open txt file
+        rosbag::Bag outfile_bag; // open bag file
+
+        switch (filetype)
+        {
+        case 0: // txt file
+            outfile = (filemode == 0) ? fopen(output_filepath, "wt") : fopen(output_filepath, "at");
+            if (outfile == nullptr)
+            {
+                printf("Fail to open data file: %s to write solution!\n", output_filepath);
+                return false;
+            }
+            break;
+
+        case 1: // bag file
+            (filemode == 0) ? outfile_bag.open(output_filepath, rosbag::bagmode::Write) : outfile_bag.open(output_filepath, rosbag::bagmode::Append);
+            if (!outfile_bag.isOpen())
+            {
+                printf("Fail to open data file: %s to write solution!\n", output_filepath);
+                return false;
+            }
+            break;
+
+        default: // the filetype is wrong
+            printf("The filetype is abnormal.\n");
             return false;
         }
 
-        // 2. Output data to the file
+        // 2. Write data to the file
         for (const auto &iter : sol_datas)
         {
             switch (datatype)
             {
             case dataformat::RobotGVINS_format:
-                // if (((fmod(iter.gps_second, 1.0) < 0.005) || (1.0 - (iter.gps_second - int(iter.gps_second)) < 0.005)))
+
+                if (filetype == 0)
                 {
-                    fprintf(outfile, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", iter.gps_week, iter.gps_second, iter.position[0], iter.position[1], iter.position[2],
-                            iter.velocity[0], iter.velocity[1], iter.velocity[2], iter.attitude[0] * IPS_R2D, iter.attitude[1] * IPS_R2D, iter.attitude[2] * IPS_R2D);
+                    fprintf(outfile, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", iter.gps_week, iter.gps_second, iter.position_XYZ[0], iter.position_XYZ[1], iter.position_XYZ[2],
+                            iter.velocity_XYZ[0], iter.velocity_XYZ[1], iter.velocity_XYZ[2], iter.attitude_Azi[0] * IPS_R2D, iter.attitude_Azi[1] * IPS_R2D, iter.attitude_Azi[2] * IPS_R2D);
+                }
+
+                if (filetype == 1)
+                {
+                    // if append to the bag, skip the data without the time period
+                    if (filemode == 1 && (ros::Time(iter.timestamp) < start_time || ros::Time(iter.timestamp) > end_time))
+                        continue;
+
+                    datastreamio::RobotGVINS_GTINSSol msg;
+                    msg.timestamp = iter.gps_week * 604800.0 + iter.gps_second;
+                    msg.header.stamp = ros::Time(msg.timestamp);
+                    msg.satnum = iter.satnum[0], msg.satnum_used = iter.satnum[0];
+                    msg.DOP[0] = iter.DOP[0], msg.DOP[1] = iter.DOP[1], msg.DOP[2] = iter.DOP[2];
+                    msg.position_XYZ[0] = iter.position_XYZ[0], msg.position_XYZ[1] = iter.position_XYZ[1], msg.position_XYZ[2] = iter.position_XYZ[2];
+                    msg.velocity_XYZ[0] = iter.velocity_XYZ[0], msg.velocity_XYZ[1] = iter.velocity_XYZ[1], msg.velocity_XYZ[2] = iter.velocity_XYZ[2];
+                    msg.attitude[0] = iter.attitude_Azi[0], msg.attitude[1] = iter.attitude_Azi[1], msg.attitude[2] = iter.attitude_Azi[2];
+                    // msg.str_header = "$GNLOG", msg.str_end = "*", msg.str_check = "CRC";
+                    outfile_bag.write(sol_topic, msg.header.stamp, msg);
                 }
 
                 break;
 
             case dataformat::TUM_format:
 
-                fprintf(outfile, "%lf %lf %lf %lf %lf %lf %lf %lf\n", iter.timestamp, iter.position[0], iter.position[1], iter.position[2],
+                fprintf(outfile, "%lf %lf %lf %lf %lf %lf %lf %lf\n", iter.timestamp, iter.position_XYZ[0], iter.position_XYZ[1], iter.position_XYZ[2],
                         iter.quaternion[0], iter.quaternion[1], iter.quaternion[2], iter.quaternion[3]);
 
                 break;
@@ -664,7 +757,20 @@ namespace dataio_common
             }
         }
 
-        fclose(outfile);
+        // 3. Close the file
+        switch (filetype)
+        {
+        case 0: // txt file
+            fclose(outfile);
+            break;
+
+        case 1: // bag file
+            outfile_bag.close();
+            break;
+
+        default:
+            break;
+        }
 
         return true;
     }

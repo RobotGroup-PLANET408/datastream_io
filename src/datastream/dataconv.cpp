@@ -90,7 +90,7 @@ namespace dataio_common
 
         ///< 1. Prepare variables
         int index, sys = 0;
-        char(*frq)[5] = NULL;
+        char (*frq)[5] = NULL;
         char gs_strFrq_tmp[NFREQ][5] = {'\0'};
         gnss_common::IPS_GPSTIME gt;
 
@@ -187,52 +187,52 @@ namespace dataio_common
         return;
     }
 
-    // FIXME: need to delete
-    // /**
-    //  * @brief       Convert the gnss observation data from IPS struct to RobotGVINS struct
-    //  * @note        1. It is used to process observation data in one epoch
-    //  *
-    //  * @param[in]   IPS_OBSDATA *           ipsdata         observation data in IPS struct
-    //  * @param[in]   RobotGVINS_GNSSObs      robotdata       observation data in RobotGVINS format
-    //  *
-    //  * @return
-    //  */
-    // void Convert_GNSSObsStruct_Onedata_IPS2RobotGVINS(const gnss_common::IPS_OBSDATA *ipsdata, datastreamio::RobotGVINS_GNSSObs &robotdata)
-    // {
-    //     if (ipsdata == NULL)
-    //         return;
+    /**
+     * @brief       Convert one gnss observation data from IPS struct to RobotGVINS format
+     * @note
+     *
+     * @param[in]   IPS_OBSDATA *           ipsdata         observation data in IPS struct
+     * @param[in]   RobotGVINS_GNSSObs      robotdata       observation data in RobotGVINS struct
+     *
+     * @return
+     */
+    void Convert_GNSSObsData_IPS2RobotGVINS(const gnss_common::IPS_OBSDATA *ipsdata, datastreamio::RobotGVINS_GNSSObs &robotdata)
+    {
+        if (ipsdata == NULL)
+            return;
 
-    //     // timestamp
-    //     robotdata.header.stamp = ros::Time(ipsdata->pubtime);
-    //     // robotdata.header.stamp = ros::Time(ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec);
+        // timestamp
+        robotdata.timestamp = ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec;
+        // robotdata.header.stamp = ros::Time(ipsdata->pubtime); // FIXME: need to delete
+        // robotdata.header.stamp = ros::Time(ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec); // FIXME: need to delete
 
-    //     // observation info
-    //     robotdata.flag = ipsdata->flag;
-    //     robotdata.nsat = ipsdata->nsat;
-    //     for (int i = 0; i < IPS_NSYS; i++)
-    //         robotdata.ngnss.push_back(ipsdata->ngnss[i]);
+        // observation info
+        robotdata.flag = ipsdata->flag;
+        robotdata.nsat = ipsdata->nsat;
+        for (int i = 0; i < IPS_NSYS; i++)
+            robotdata.ngnss.push_back(ipsdata->ngnss[i]);
 
-    //     // observation data for each satellite
-    //     for (int i = 0; i < ipsdata->obs.size(); i++)
-    //     {
-    //         datastreamio::RobotGVINS_GNSSSat sat_msg;
-    //         sat_msg.prn = ipsdata->obs.at(i).prn;
-    //         for (int f = 0; f < NFREQ; f++)
-    //         {
-    //             sat_msg.cp_meas.push_back(ipsdata->obs.at(i).L[f]);
-    //             sat_msg.pr_meas.push_back(ipsdata->obs.at(i).P[f]);
-    //             sat_msg.do_meas.push_back(ipsdata->obs.at(i).D[f]);
-    //             sat_msg.sig_cno.push_back(ipsdata->obs.at(i).S[f]);
-    //             sat_msg.code.push_back(ipsdata->obs.at(i).code[f]);
-    //             sat_msg.SNR.push_back(ipsdata->obs.at(i).SNR[f]);
-    //             sat_msg.LLI.push_back(ipsdata->obs.at(i).LLI[f]);
-    //             sat_msg.cs.push_back(ipsdata->obs.at(i).cs[f]);
-    //             sat_msg.P_TGD.push_back(ipsdata->obs.at(i).P_TGD[f]);
-    //             sat_msg.SMP.push_back(ipsdata->obs.at(i).SMP[f]);
-    //         }
-    //         robotdata.obsdata.push_back(sat_msg);
-    //     }
-    // }
+        // observation data for each satellite
+        for (int i = 0; i < ipsdata->obs.size(); i++)
+        {
+            datastreamio::RobotGVINS_GNSSSat sat_msg;
+            sat_msg.prn = ipsdata->obs.at(i).prn;
+            for (int f = 0; f < NFREQ; f++)
+            {
+                sat_msg.cp_meas.push_back(ipsdata->obs.at(i).L[f]);
+                sat_msg.pr_meas.push_back(ipsdata->obs.at(i).P[f]);
+                sat_msg.do_meas.push_back(ipsdata->obs.at(i).D[f]);
+                sat_msg.sig_cno.push_back(ipsdata->obs.at(i).S[f]);
+                sat_msg.code.push_back(ipsdata->obs.at(i).code[f]);
+                sat_msg.SNR.push_back(ipsdata->obs.at(i).SNR[f]);
+                sat_msg.LLI.push_back(ipsdata->obs.at(i).LLI[f]);
+                sat_msg.cs.push_back(ipsdata->obs.at(i).cs[f]);
+                sat_msg.P_TGD.push_back(ipsdata->obs.at(i).P_TGD[f]);
+                sat_msg.SMP.push_back(ipsdata->obs.at(i).SMP[f]);
+            }
+            robotdata.obsdata.push_back(sat_msg);
+        }
+    }
 
     /**
      * @brief       Convert all gnss observation data from IPS struct to RobotGVINS format
@@ -243,7 +243,6 @@ namespace dataio_common
      *
      * @return
      */
-
     extern void Convert_GNSSObsData_IPS2RobotGVINS(const std::list<gnss_common::IPS_OBSDATA> &ipsdata, std::list<datastreamio::RobotGVINS_GNSSObs> &robotdata)
     {
         if (ipsdata.size() <= 0)
@@ -365,62 +364,61 @@ namespace dataio_common
         }
     }
 
-    // FIXME: need to delete
-    // /**
-    //  * @brief       Convert the gnss ephemeris data from IPS struct to RobotGVINS struct
-    //  * @note        1. It is used to process ephemeris data for only one satellite
-    //  *
-    //  * @param[in]   IPS_GPSEPH *            ipsdata         ephemeris data in IPS struct
-    //  * @param[in]   RobotGVINS_GNSSEph      robotdata       ephemeris data in RobotGVINS format
-    //  *
-    //  * @return
-    //  */
-    // void Convert_GNSSEphStruct_Onedata_IPS2RobotGVINS(const gnss_common::IPS_GPSEPH *ipsdata, datastreamio::RobotGVINS_GNSSEph &robotdata)
-    // {
-    //     if (ipsdata == NULL)
-    //         return;
+    /**
+     * @brief       Convert one gnss ephemeris data from IPS struct to RobotGVINS format
+     * @note
+     *
+     * @param[in]   IPS_GPSEPH *            ipsdata         ephemeris data in IPS struct
+     * @param[in]   RobotGVINS_GNSSEph      robotdata       ephemeris data in RobotGVINS struct
+     *
+     * @return
+     */
+    void Convert_GNSSEphData_IPS2RobotGVINS(const gnss_common::IPS_GPSEPH *ipsdata, datastreamio::RobotGVINS_GNSSEph &robotdata)
+    {
+        if (ipsdata == NULL)
+            return;
 
-    //     // get the ephemeris system
-    //     int sys = IPS_SYSNON;
-    //     int prn = ipsdata->prn;                               // GNSS prn in IPS program
-    //     int sat = gnss_common::satprn2no(prn, &sys);          // GNSS prn for each system
-    //     robotdata.header.stamp = ros::Time(ipsdata->pubtime); // the timestamp to publish ros message
+        // get the ephemeris system
+        int sys = IPS_SYSNON;
+        int prn = ipsdata->prn;                      // GNSS prn in IPS program
+        int sat = gnss_common::satprn2no(prn, &sys); // GNSS prn for each system
+        // robotdata.header.stamp = ros::Time(ipsdata->pubtime); // the timestamp to publish ros message // FIXME: need to delete
 
-    //     // get the data body
-    //     robotdata.prn = ipsdata->prn;
-    //     robotdata.iode = ipsdata->iode;
-    //     robotdata.iodc = ipsdata->iodc;
-    //     robotdata.sva = ipsdata->sva;
-    //     robotdata.svh = ipsdata->svh;
-    //     robotdata.week = ipsdata->week;
-    //     robotdata.code = ipsdata->code;
-    //     robotdata.flag = ipsdata->flag;
-    //     robotdata.toe = ipsdata->toe.GPSWeek * 604800 + ipsdata->toe.secsOfWeek + ipsdata->toe.fracOfSec;
-    //     robotdata.toc = ipsdata->toc.GPSWeek * 604800 + ipsdata->toc.secsOfWeek + ipsdata->toc.fracOfSec;
-    //     robotdata.ttr = ipsdata->ttr.GPSWeek * 604800 + ipsdata->ttr.secsOfWeek + ipsdata->ttr.fracOfSec;
-    //     robotdata.eph_A = ipsdata->A;
-    //     robotdata.eph_e = ipsdata->e;
-    //     robotdata.i0 = ipsdata->i0;
-    //     robotdata.OMG0 = ipsdata->OMG0;
-    //     robotdata.omg = ipsdata->omg;
-    //     robotdata.M0 = ipsdata->M0;
-    //     robotdata.deln = ipsdata->deln;
-    //     robotdata.OMGd = ipsdata->OMGd;
-    //     robotdata.idot = ipsdata->idot;
-    //     robotdata.crc = ipsdata->crc;
-    //     robotdata.crs = ipsdata->crs;
-    //     robotdata.cuc = ipsdata->cuc;
-    //     robotdata.cus = ipsdata->cus;
-    //     robotdata.cic = ipsdata->cic;
-    //     robotdata.cis = ipsdata->cis;
-    //     robotdata.toes = ipsdata->toes;
-    //     robotdata.fit = ipsdata->fit;
-    //     robotdata.f0 = ipsdata->f0;
-    //     robotdata.f1 = ipsdata->f1;
-    //     robotdata.f2 = ipsdata->f2;
-    //     for (int i = 0; i < 4; i++)
-    //         robotdata.tgd[i] = ipsdata->tgd[i];
-    // }
+        // get the data body
+        robotdata.prn = ipsdata->prn;
+        robotdata.iode = ipsdata->iode;
+        robotdata.iodc = ipsdata->iodc;
+        robotdata.sva = ipsdata->sva;
+        robotdata.svh = ipsdata->svh;
+        robotdata.week = ipsdata->week;
+        robotdata.code = ipsdata->code;
+        robotdata.flag = ipsdata->flag;
+        robotdata.toe = ipsdata->toe.GPSWeek * 604800 + ipsdata->toe.secsOfWeek + ipsdata->toe.fracOfSec;
+        robotdata.toc = ipsdata->toc.GPSWeek * 604800 + ipsdata->toc.secsOfWeek + ipsdata->toc.fracOfSec;
+        robotdata.ttr = ipsdata->ttr.GPSWeek * 604800 + ipsdata->ttr.secsOfWeek + ipsdata->ttr.fracOfSec;
+        robotdata.eph_A = ipsdata->A;
+        robotdata.eph_e = ipsdata->e;
+        robotdata.i0 = ipsdata->i0;
+        robotdata.OMG0 = ipsdata->OMG0;
+        robotdata.omg = ipsdata->omg;
+        robotdata.M0 = ipsdata->M0;
+        robotdata.deln = ipsdata->deln;
+        robotdata.OMGd = ipsdata->OMGd;
+        robotdata.idot = ipsdata->idot;
+        robotdata.crc = ipsdata->crc;
+        robotdata.crs = ipsdata->crs;
+        robotdata.cuc = ipsdata->cuc;
+        robotdata.cus = ipsdata->cus;
+        robotdata.cic = ipsdata->cic;
+        robotdata.cis = ipsdata->cis;
+        robotdata.toes = ipsdata->toes;
+        robotdata.fit = ipsdata->fit;
+        robotdata.f0 = ipsdata->f0;
+        robotdata.f1 = ipsdata->f1;
+        robotdata.f2 = ipsdata->f2;
+        for (int i = 0; i < 4; i++)
+            robotdata.tgd[i] = ipsdata->tgd[i];
+    }
 
     /**
      * @brief       Convert all gnss ephemeris data from IPS struct to RobotGVINS format
@@ -499,48 +497,48 @@ namespace dataio_common
         if (sol_datas.size() <= 0)
             return false;
 
-        // 1. get the initial position as the origin
-        Eigen::Vector3d origin_position = Eigen::Vector3d::Zero();
-        origin_position << sol_datas.front().position[0], sol_datas.front().position[1], sol_datas.front().position[2];
+        // // 1. get the initial position as the origin
+        // Eigen::Vector3d origin_position = Eigen::Vector3d::Zero();
+        // origin_position << sol_datas.front().position[0], sol_datas.front().position[1], sol_datas.front().position[2];
 
-        for (auto &iter : sol_datas)
-        {
-            // 2.1 compute the GPS time
-            iter.timestamp = iter.gps_week * 604800 + iter.gps_second;
+        // for (auto &iter : sol_datas)
+        // {
+        //     // 2.1 compute the GPS time
+        //     iter.timestamp = iter.gps_week * 604800 + iter.gps_second;
 
-            // 2.2 compute the rotation matrix from ecef to enu
-            double XYZ[3] = {0.0}, LLH[3] = {0.0}, R_eTon[9] = {0.0};
-            Eigen::MatrixXd R_eTon_mat = Eigen::Matrix3d::Zero();
+        //     // 2.2 compute the rotation matrix from ecef to enu
+        //     double XYZ[3] = {0.0}, LLH[3] = {0.0}, R_eTon[9] = {0.0};
+        //     Eigen::MatrixXd R_eTon_mat = Eigen::Matrix3d::Zero();
 
-            XYZ[0] = iter.position[0], XYZ[1] = iter.position[1], XYZ[2] = iter.position[2];
-            gnss_common::XYZ2LLH(XYZ, LLH);
-            dataio_common::Rxyz2enu(LLH, R_eTon);
-            R_eTon_mat = dataio_common::Array2EigenMatrix(R_eTon, 3, 3);
+        //     XYZ[0] = iter.position[0], XYZ[1] = iter.position[1], XYZ[2] = iter.position[2];
+        //     gnss_common::XYZ2LLH(XYZ, LLH);
+        //     dataio_common::Rxyz2enu(LLH, R_eTon);
+        //     R_eTon_mat = dataio_common::Array2EigenMatrix(R_eTon, 3, 3);
 
-            // 2.3 position
-            Eigen::Vector3d position = Eigen::Vector3d::Zero();
-            position << iter.position[0], iter.position[1], iter.position[2];
-            Eigen::Vector3d position_nav = R_eTon_mat * (position - origin_position);
-            iter.position[0] = position_nav(0), iter.position[1] = position_nav(1), iter.position[2] = position_nav(2);
+        //     // 2.3 position
+        //     Eigen::Vector3d position = Eigen::Vector3d::Zero();
+        //     position << iter.position[0], iter.position[1], iter.position[2];
+        //     Eigen::Vector3d position_nav = R_eTon_mat * (position - origin_position);
+        //     iter.position[0] = position_nav(0), iter.position[1] = position_nav(1), iter.position[2] = position_nav(2);
 
-            // 2.4 velocity
-            Eigen::Vector3d velocity = Eigen::Vector3d::Zero();
-            velocity << iter.velocity[0], iter.velocity[1], iter.velocity[2];
-            Eigen::Vector3d velocity_nav = R_eTon_mat * velocity;
-            iter.velocity[0] = velocity_nav(0), iter.velocity[1] = velocity_nav(1), iter.velocity[2] = velocity_nav(2);
+        //     // 2.4 velocity
+        //     Eigen::Vector3d velocity = Eigen::Vector3d::Zero();
+        //     velocity << iter.velocity[0], iter.velocity[1], iter.velocity[2];
+        //     Eigen::Vector3d velocity_nav = R_eTon_mat * velocity;
+        //     iter.velocity[0] = velocity_nav(0), iter.velocity[1] = velocity_nav(1), iter.velocity[2] = velocity_nav(2);
 
-            // 2.5 convert attitude to rotation matrix and quaternion
-            double azimuth[3] = {0.0}, attitude[3] = {0.0}, R_bToe[9] = {0.0};
-            azimuth[0] = iter.attitude[0], azimuth[1] = iter.attitude[1], azimuth[2] = iter.attitude[2];
-            dataio_common::Azimuth2Attitude(azimuth, attitude);
-            dataio_common::Attitude2Rbe(attitude, LLH, R_bToe);
-            Eigen::Matrix3d R_bToe_mat = dataio_common::Array2EigenMatrix(R_bToe, 3, 3);
-            Eigen::Matrix3d R_bTon_mat = R_eTon_mat * R_bToe_mat;
-            dataio_common::EigenMatrix2Array(R_bTon_mat, iter.rotation);
+        //     // 2.5 convert attitude to rotation matrix and quaternion
+        //     double azimuth[3] = {0.0}, attitude[3] = {0.0}, R_bToe[9] = {0.0};
+        //     azimuth[0] = iter.attitude[0], azimuth[1] = iter.attitude[1], azimuth[2] = iter.attitude[2];
+        //     dataio_common::Azimuth2Attitude(azimuth, attitude);
+        //     dataio_common::Attitude2Rbe(attitude, LLH, R_bToe);
+        //     Eigen::Matrix3d R_bToe_mat = dataio_common::Array2EigenMatrix(R_bToe, 3, 3);
+        //     Eigen::Matrix3d R_bTon_mat = R_eTon_mat * R_bToe_mat;
+        //     dataio_common::EigenMatrix2Array(R_bTon_mat, iter.rotation);
 
-            Eigen::Vector4d q_bTon = dataio_common::rot_2_quat(R_bTon_mat);
-            dataio_common::EigenVector2Array(q_bTon, iter.quaternion);
-        }
+        //     Eigen::Vector4d q_bTon = dataio_common::rot_2_quat(R_bTon_mat);
+        //     dataio_common::EigenVector2Array(q_bTon, iter.quaternion);
+        // }
 
         return true;
     }
