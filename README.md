@@ -28,21 +28,12 @@ Clone the project to '~/catkin_ws/src'
 '''
 
 ## 3. Example
-### 3.1 data conversion
-For an example, we convert the *RINEX 3.x format* GNSS raw data file to the *RobotGVINS GNSS observation data*, the steps are as follows:
-
-    // step 1: extract GNSS observation data from rinex file
-    // NOTE: The gnss observations are stored as customized format
-    std::list<gnss_common::IPS_OBSDATA> ips_baseobs(0);
-    dataio_common::Extract_GNSSObsData_RINEX3Format(baseobs_infilepath.c_str(), ips_baseobs);
-    
-    // step 2: convert GNSS observation data format to RobotGVINS format
-    std::list<datastreamio::RobotGVINS_GNSSObs> robot_baseobs(0);
-    dataio_common::Convert_GNSSObsData_IPS2RobotGVINS(ips_baseobs, robot_baseobs);
-    
-    // step 3: write GNSS obervation data to bag file
-    // NOTE: The output gnss observation data should be RobotGVINS format
-    dataio_common::Write_GNSSObsData_RobotGVINSFormat(bag_outfilepath.c_str(), dataio_common::RobotGVINS_gnssobs_topic_base, dataio_common::RobotGVINS_imu_topic, robot_baseobs, 2);
+### 3.1 extract VisionRTK data, convert to RobotGVINS format and write to rosbag
+'''
+    cd ~/catkin_ws
+    source devel/setup.bash
+    rosrun datastreamio bagconvert_VisionRTK src/datastream_io/config/bagconvert_VisionRTK.yaml
+'''
 
 
 ## 4. Acknowledgements
@@ -50,3 +41,8 @@ We used [rtklib](https://github.com/tomojitakasu/RTKLIB/tree/rtklib_2.4.3) for G
 
 ## 5. License
 We are still working on improving the code reliability. For any technical issues, please contact Weihao Lei <whlei20000419@whu.edu.cn>.
+
+## 6. History / Events
+* **2025.03.01** - The *(Version 1.0.0)*:  This version can extract GNSS raw data from Vision-RTK2(Fixposition) and convert as RobotGVINS format to process. It can also extract GNSS raw data in RINEX 3.0x format and convert as RobotGVINS format. Thanks to the contribution of Lei weihao.
+* **2025.07.04** - The *(Version 1.1.0)*:  This version can receive GNSS raw data from Vision-RTK2(Fixposition), convert as RobotGVINS format, and publish as ros messages to process. It can also receive GNSS raw data from RTCM3 TCP stream and publish as ros messages. Thanks to the contribution of Yan zhehua, Zhao yueqing, Lei weihao.
+* **2025.07.20** - The *(Version 1.1.1)*:  This version integrated the codes, fixed some problems, and can read configuration files to process data conversion. Thanks to the contribution of Lei weihao

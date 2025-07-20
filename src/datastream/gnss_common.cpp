@@ -6,49 +6,6 @@
 #include "datastream.h"
 #include "gnss_common.h"
 
-namespace dataio_common
-{
-    /**
-     * @brief       Copy the string from the src to the dst
-     * @note
-     *
-     * @param[in]   src          char     source string
-     * @param[in]   nPos         int      the start location
-     * @param[in]   nCount       int      the number of char
-     * @param[out]  dst          char     destination string
-     *
-     * @return      void
-     */
-    void xstrmid(const char *src, const int nPos, const int nCount, char *dst)
-    {
-        int i;
-        const char *str;
-        char c;
-
-        str = src + nPos;
-
-        for (i = 0; i < nCount; i++)
-        {
-            c = *(str + i);
-            if (c)
-            {
-                *(dst + i) = c;
-            }
-            else
-            {
-                // elimate the '\n' in the end
-                if (dst[i - 1] == '\n')
-                    dst[i - 1] = '\0';
-                *(dst + i) = '\0';
-                break;
-            }
-        }
-
-        *(dst + nCount) = '\0';
-    }
-
-}
-
 namespace gnss_common
 {
     /**

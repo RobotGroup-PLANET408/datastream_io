@@ -20,6 +20,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <unordered_set>
 #include <boost/foreach.hpp>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -77,17 +78,16 @@ const double GPS_BDS_SECOND = 14.0;                       ///< the second differ
 // data stream variables
 namespace dataio_common
 {
-
     ///< data format
     enum dataformat
     {
-        ROSstd_format,
-        VisionRTK_format_01,
-        VisionRTK_format_02,
-        KAIST_format,
-        RobotGVINS_format,
-        TUM_format,
-        IPS_format
+        ROS_Format,
+        VisionRTK_Format01,
+        VisionRTK_Format02,
+        KAIST_Format,
+        RobotGVINS_Format,
+        TUM_Format,
+        IPS_Format
     };
 
     ///< time system
@@ -97,10 +97,7 @@ namespace dataio_common
         GPS_time
     };
 
-    ///< ros topic
-    // ros standard
-    static std::string ROS_gnsssol_topic = "/rosstd/gnsssol";
-
+    ///< ROS topic
     // Intel D457
     static std::string IntelD457_compressimage_topic = "/camera/color/image_raw/compressed";
     static std::string IntelD457_image_topic = "/camera/color/image_raw";
@@ -126,7 +123,6 @@ namespace dataio_common
     static std::string RobotGVINS_gnssobs_topic_base = "/gnss/obs/base";
     static std::string RobotGVINS_gnsseph_topic_rove = "/gnss/eph/rove";
     static std::string RobotGVINS_gnsseph_topic_base = "/gnss/eph/base";
-    static std::string RobotGVINS_gtsol_topic = "/gt/solution";
 }
 
 /**********************************************************************************************************************************
@@ -135,66 +131,40 @@ namespace dataio_common
 
 namespace dataio_common
 {
-
     /**
-     *@brief   INS solution data struct
+     *@brief   configuration struct
      */
-    struct Solution_INS
+    struct Configutation
     {
-        int gps_week;              // GPS week
-        double gps_second;         // GPS second (s)
-        double timestamp;          // GPS timestamp (s)
-        double pubtime;            // timestamp to publish ros message
-        double position_LLH[3];    // BLH(rad/rad/m)
-        double position_XYZ[3];    // ECEF(m)
-        double position_ENU[3];    // ENU(m)
-        double velocity_XYZ[3];    // ECEF(m/s)
-        double velocity_ENU[3];    // ENU(m/s)
-        double attitude_Azi[3];    // Heading, Pitch, Roll (rad) NOTE: Azimuth
-        double attitude_Att[3];    // Heading, Pitch, Roll (rad) NOTE: Attitude
-        double positioncov_XYZ[9]; // ECEF(m2)/ENU(m2)
-        double positioncov_ENU[9]; // ENU(m2)
-        double velocitycov_XYZ[9]; // ECEF(m2/s2)/ENU(m2/s2)
-        double velocitycov_ENU[9]; // ECEF(m2/s2)
-        double rotation[9];        // NOTE: the src frame and dst frame
-        double quaternion[4];      // xyzw NOTE: the src frame and dst frame (be consistent with rotation)
-        int satnum[6];             // ALL/GPS/GLO/BDS/GAL/QZSS
-        double DOP[3];             // HDOP/VDOP/PDOP
+        ///< Data filepath
+        std::string output_filepath = "\0";
+        std::string rosbag_filepath = "\0";
+        std::vector<std::string> rosbag_filename;
+        std::string gnssbaseobs_filepath = "\0";
+        std::string gnssbaseeph_filepath = "\0";
+        std::string gnssolution_filepath = "\0";
 
-        Solution_INS()
-        {
-            gps_week = 0;
-            gps_second = 0.0;
-            timestamp = 0.0;
+        ///< ROS topic
+        // before convertion
+        std::string imu_topic_input = "\0";
+        std::string image_topic_input = "\0";
+        std::string gnssraw_topic_input = "\0";
+        std::string gnsssol_topic_input = "\0";
 
-            for (int i = 0; i < 3; i++)
-            {
-                position_XYZ[i] = 0.0;
-                position_ENU[i] = 0.0;
-                position_LLH[i] = 0.0;
-                velocity_XYZ[i] = 0.0;
-                velocity_ENU[i] = 0.0;
-            }
-            for (int i = 0; i < 9; i++)
-            {
-                positioncov_XYZ[i] = 0.0;
-                positioncov_ENU[i] = 0.0;
-                velocitycov_XYZ[i] = 0.0;
-                velocitycov_ENU[i] = 0.0;
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                quaternion[i] = 0.0;
-            }
-            for (int i = 0; i < 9; i++)
-            {
-                rotation[i] = 0.0;
-            }
-            for (int i = 0; i < 6; i++)
-                satnum[i] = 0;
-            for (int i = 0; i < 3; i++)
-                DOP[i] = 0.0;
-        }
+        // after convertion
+        std::string imu_topic_output = "\0";
+        std::string image_topic_output = "\0";
+        std::string gnssroveobs_topic_output = "\0";
+        std::string gnssbaseobs_topic_output = "\0";
+        std::string gnssroveeph_topic_output = "\0";
+        std::string gnssbaseeph_topic_output = "\0";
+        std::string gnsssol_topic_output = "\0";
+
+        ///< Data format
+        dataformat format_input = dataformat::ROS_Format;
+        dataformat format_output = dataformat::ROS_Format;
+
+        Configutation() = default;
     };
 
     /**
@@ -223,31 +193,7 @@ namespace dataio_common
 
         Solution_GNSS()
         {
-            gps_week = 0;
-            gps_second = 0.0;
-            timestamp = 0.0;
-            pubtime = 0.0;
-
-            for (int i = 0; i < 3; i++)
-            {
-                position_XYZ[i] = 0.0;
-                position_ENU[i] = 0.0;
-                position_LLH[i] = 0.0;
-                velocity_XYZ[i] = 0.0;
-                velocity_ENU[i] = 0.0;
-            }
-            for (int i = 0; i < 9; i++)
-            {
-                positioncov_XYZ[i] = 0.0;
-                positioncov_ENU[i] = 0.0;
-                velocitycov_XYZ[i] = 0.0;
-                velocitycov_ENU[i] = 0.0;
-            }
-            position_acch = 0.0;
-            position_accv = 0.0;
-            position_acce = 0.0;
-            position_accn = 0.0;
-            position_accu = 0.0;
+            ZeroStruct(*this, Solution_GNSS);
         }
     };
 }

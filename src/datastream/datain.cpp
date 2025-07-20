@@ -14,19 +14,131 @@
 namespace dataio_common
 {
     /**
-     * @brief       Extract imu data from bag file
-     * @note        1. The imu data should be ros standard format defaultly
-     *              2. The time system should be GPS time defaultly
+     * @brief       Copy the string from the src to the dst
+     * @note
      *
-     * @param[in]   char*           bag_infilepath      filepath
-     * @param[in]   string          imu_topic           topic
-     * @param[out]  list            imudatas            imu data of all epochs
-     * @param[in]   timesystem      timesys             timesystem before converison
+     * @param[in]   src          char     source string
+     * @param[in]   nPos         int      the start location
+     * @param[in]   nCount       int      the number of char
+     * @param[out]  dst          char     destination string
+     *
+     * @return      void
+     */
+    void xstrmid(const char *src, const int nPos, const int nCount, char *dst)
+    {
+        int i;
+        const char *str;
+        char c;
+
+        str = src + nPos;
+
+        for (i = 0; i < nCount; i++)
+        {
+            c = *(str + i);
+            if (c)
+            {
+                *(dst + i) = c;
+            }
+            else
+            {
+                // elimate the '\n' in the end
+                if (dst[i - 1] == '\n')
+                    dst[i - 1] = '\0';
+                *(dst + i) = '\0';
+                break;
+            }
+        }
+
+        *(dst + nCount) = '\0';
+    }
+
+    /**
+     * @brief       Read configuration file
+     * @note
+     *
+     * @param[in]   string             configfile      configuration filepath
+     * @param[in]   Configutation      config          configurtation struct
+     *
+     * @return      bool      true       read successfully
+     *                        false      fail to read
+     */
+    bool Read_ConfigFile(const std::string configfile, dataio_common::Configutation &config)
+    {
+        // open the configuration file
+        cv::FileStorage fsSettings(configfile, cv::FileStorage::READ);
+        if (!fsSettings.isOpened())
+        {
+            ROS_ERROR("Fail to open configuration file: %s", configfile.c_str());
+            return false;
+        }
+
+        // get each configuration
+        cv::FileNode filenodes;
+        int inputformat = -1, outputformat = -1;
+
+        fsSettings["Output_Filepath"] >> config.output_filepath;
+        fsSettings["ROSBag_FilePath"] >> config.rosbag_filepath;
+        filenodes = fsSettings["ROSBag_FileName"];
+        config.rosbag_filename.clear();
+        if (filenodes.isSeq())
+        {
+            for (const auto &node : filenodes)
+                config.rosbag_filename.push_back((std::string)node);
+        }
+        fsSettings["GNSSBaseObs_FilePath"] >> config.gnssbaseobs_filepath;
+        fsSettings["GNSSBaseEph_FilePath"] >> config.gnssbaseeph_filepath;
+        fsSettings["GNSSolution_FilePath"] >> config.gnssolution_filepath;
+
+        fsSettings["Imu_Topic_Input"] >> config.imu_topic_input;
+        fsSettings["Image_Topic_Input"] >> config.image_topic_input;
+        fsSettings["GNSSRaw_Topic_Input"] >> config.gnssraw_topic_input;
+        fsSettings["GNSSSol_Topic_Input"] >> config.gnsssol_topic_input;
+
+        fsSettings["Imu_Topic_Output"] >> config.imu_topic_output;
+        fsSettings["Image_Topic_Output"] >> config.image_topic_output;
+        fsSettings["GNSSRoveObs_Topic_Output"] >> config.gnssroveobs_topic_output;
+        fsSettings["GNSSBaseObs_Topic_Output"] >> config.gnssbaseobs_topic_output;
+        fsSettings["GNSSRoveEph_Topic_Output"] >> config.gnssroveeph_topic_output;
+        fsSettings["GNSSBaseEph_Topic_Output"] >> config.gnssbaseeph_topic_output;
+        fsSettings["GNSSSol_Topic_Output"] >> config.gnsssol_topic_output;
+
+        fsSettings["DataFormat_Input"] >> config.format_input;
+        fsSettings["DataFormat_Output"] >> config.format_output;
+
+        // check configuration parameters
+        if (config.rosbag_filename.size() <= 0)
+        {
+            ROS_ERROR("Fail to load available rosbag files.");
+            return false;
+        }
+        if (config.output_filepath == "\0")
+        {
+            ROS_ERROR("Fail to load filepath to output.");
+            return false;
+        }
+        if (config.format_input < 0 || config.format_output < 0 || config.format_input == config.format_output)
+        {
+            ROS_ERROR("Data format is wrong.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract imu data from bag file
+     * @note        1. The imu data should be ROS format
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
+     *
+     * @param[in]   char*           bagfile       filepath
+     * @param[in]   string          imutopic      ros topic
+     * @param[out]  list            imudatas      all imu data
+     * @param[in]   timesystem      timesys       origin time system
      *
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern bool Extract_IMUdata_ROSBag(const char *bag_infilepath, const std::string &imu_topic, std::list<sensor_msgs::Imu> &imudatas, const dataio_common::timesystem timesys)
+    extern bool Extract_IMUdata_ROSBag(const char *bag_infilepath, const std::string &imutopic, std::list<sensor_msgs::Imu> &imudatas, const dataio_common::timesystem timesys)
     {
         // 1. Open the bag file to read imu data
         rosbag::Bag bag_in;
@@ -42,7 +154,7 @@ namespace dataio_common
 
         // 2. Prepare variables
         std::vector<std::string> topics;
-        topics.push_back(std::string(imu_topic));
+        topics.push_back(std::string(imutopic));
         rosbag::View view(bag_in, rosbag::TopicQuery(topics));
 
         // 3. Read and store the imu data
@@ -50,14 +162,12 @@ namespace dataio_common
         {
             if (m.instantiate<sensor_msgs::Imu>() != nullptr)
             {
-                // get the imu message
                 sensor_msgs::Imu one_imudata = *(m.instantiate<sensor_msgs::Imu>());
 
-                // if need, convert the time timestamp from Linux time to GPS time
+                // if need, convert Linux time to GPS time
                 if (timesys == dataio_common::timesystem::Linux_time)
                     one_imudata.header.stamp = ros::Time(one_imudata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
 
-                // store the imu message
                 imudatas.push_back(one_imudata);
             }
         }
@@ -70,24 +180,24 @@ namespace dataio_common
 
     /**
      * @brief       Extract image data from bag file
-     * @note        1. The image data should be ros standard format defaultly
-     *              2. The time system will be converted be GPS time defaultly
+     * @note        1. The image data should be ros standard format
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
      *
-     * @param[in]   char*           bag_infilepath      filepath
-     * @param[in]   string          img_topic           topic
-     * @param[out]  list            imgdatas            image data of all epochs
-     * @param[in]   timesystem      timesys             timesystem before converison
+     * @param[in]   char*           bagfile       filepath
+     * @param[in]   string          imgtopic      ros topic
+     * @param[out]  list            imgdatas      all image data
+     * @param[in]   timesystem      timesys       origin time system
      *
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern bool Extract_ImageData_ROSBag(const char *bag_infilepath, const std::string &img_topic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys = dataio_common::timesystem::GPS_time)
+    extern bool Extract_ImageData_ROSBag(const char *bagfile, const std::string &imgtopic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys)
     {
         // 1. Open the bag file to read image data
         rosbag::Bag bag_in;
         try
         {
-            bag_in.open(bag_infilepath, rosbag::bagmode::Read);
+            bag_in.open(bagfile, rosbag::bagmode::Read);
         }
         catch (const rosbag::BagException &e)
         {
@@ -97,23 +207,19 @@ namespace dataio_common
 
         // 2. Prepare variables
         std::vector<std::string> topics;
-        topics.push_back(std::string(img_topic));
+        topics.push_back(std::string(imgtopic));
         rosbag::View view(bag_in, rosbag::TopicQuery(topics));
 
         // 3. Read image data from the bag file and write
         foreach (rosbag::MessageInstance const m, view)
         {
-            // get one image message
             sensor_msgs::Image::ConstPtr image_msg = m.instantiate<sensor_msgs::Image>();
-
-            // get the data body
             sensor_msgs::Image one_imgdata = *image_msg;
 
             // if need, convert the time timestamp from Linux time to GPS time
             if (timesys == dataio_common::timesystem::Linux_time)
                 one_imgdata.header.stamp = ros::Time(one_imgdata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
 
-            // store the message
             imgdatas.push_back(one_imgdata);
         }
 
@@ -125,24 +231,24 @@ namespace dataio_common
 
     /**
      * @brief       Extract compressed image data from bag file
-     * @note        1. The image data should be compressed ros standard format defaultly
-     *              2. The time system will be converted be GPS time defaultly
+     * @note        1. The image data should be compressed ros standard format
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
      *
-     * @param[in]   char*           bag_infilepath      filepath
-     * @param[in]   string          img_topic           topic
-     * @param[out]  list            imgdatas            image data of all epochs
-     * @param[in]   timesystem      timesys             timesystem before converison
+     * @param[in]   char*           bagfile       filepath
+     * @param[in]   string          imgtopic      ros topic
+     * @param[out]  list            imgdatas      all image data
+     * @param[in]   timesystem      timesys       origin time system
      *
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern bool Extract_CompressedImageData_ROSBag(const char *bag_infilepath, const std::string &img_topic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys)
+    extern bool Extract_CompressedImageData_ROSBag(const char *bagfile, const std::string &imgtopic, std::list<sensor_msgs::Image> &imgdatas, const dataio_common::timesystem timesys)
     {
         // 1. Open the bag file to read image data
         rosbag::Bag bag_in;
         try
         {
-            bag_in.open(bag_infilepath, rosbag::bagmode::Read);
+            bag_in.open(bagfile, rosbag::bagmode::Read);
         }
         catch (const rosbag::BagException &e)
         {
@@ -152,13 +258,12 @@ namespace dataio_common
 
         // 2. Prepare variables
         std::vector<std::string> topics;
-        topics.push_back(std::string(img_topic));
+        topics.push_back(std::string(imgtopic));
         rosbag::View view(bag_in, rosbag::TopicQuery(topics));
 
         // 3. Read image data from the bag file and write
         foreach (rosbag::MessageInstance const m, view)
         {
-            // get one image message
             sensor_msgs::CompressedImage::ConstPtr image_msg = m.instantiate<sensor_msgs::CompressedImage>();
 
             if (image_msg != nullptr)
@@ -167,21 +272,16 @@ namespace dataio_common
                 {
                     // uncompress image data
                     cv::Mat image_data = cv::imdecode(cv::Mat(image_msg->data), cv::IMREAD_COLOR);
-
-                    // create image data
                     cv_bridge::CvImage cv_image;
                     cv_image.header = image_msg->header;
                     cv_image.encoding = "bgr8";
                     cv_image.image = image_data;
-
-                    // get the image message
                     sensor_msgs::Image one_imgdata = *cv_image.toImageMsg();
 
                     // if need, convert Linux time to GPS time
                     if (timesys == dataio_common::timesystem::Linux_time)
                         one_imgdata.header.stamp = ros::Time(one_imgdata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
 
-                    // store the image message
                     imgdatas.push_back(one_imgdata);
                 }
                 catch (cv::Exception &e)
@@ -198,286 +298,21 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract imu data from bag file (KAIST Xsens format) and save as ros standard format
-     * @note        1. The imu data to read should be KAIST Xsens format
-     *              2. The imu data is saved as ros standard format defaultly
-     *              3. If need, the GPS/Linux time will be converted
-     *
-     * @param[in]   char*      bag_infilepath      filepath
-     * @param[in]   string     imu_topic           topic
-     * @param[out]  list       imudatas            imu data of all epochs
-     *
-     * @return      bool      true       extract successfully
-     *                        false      fail to extract
-     */
-    extern bool extract_imudata_kaistsens_rosbag(const char *bag_infilepath, const std::string &imu_topic, std::list<sensor_msgs::Imu> &imudatas)
-    {
-        // 1. Open the bag file to read imu data
-        rosbag::Bag bag_in;
-        bag_in.open(bag_infilepath, rosbag::bagmode::Read);
-        if (!bag_in.isOpen())
-        {
-            printf("open ros bag file to read data unsuccessfully!\n");
-            return false;
-        }
-
-        // 2. Prepare variables
-        std::vector<std::string> topics;
-        topics.push_back(std::string(imu_topic));
-        rosbag::View view(bag_in, rosbag::TopicQuery(topics));
-
-        // 3. Read and store the imu data
-        foreach (rosbag::MessageInstance const m, view)
-        {
-            if (m.instantiate<datastreamio::KAIST_XsensIMU>() != nullptr)
-            {
-                // get one imu message
-                datastreamio::KAIST_XsensIMU::ConstPtr imu_msg = m.instantiate<datastreamio::KAIST_XsensIMU>();
-
-                // store the imu message as ros standard format
-                sensor_msgs::Imu one_imudata;
-                // (1) convert the time timestamp from Linux time to GPS time
-                double timestamp = imu_msg->header.stamp.sec + imu_msg->header.stamp.nsec * 1e-9;
-                timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
-                one_imudata.header.stamp = ros::Time(timestamp);
-                // (2) store the acce and gyro data
-                one_imudata.linear_acceleration.x = imu_msg->acceleration_data.x;
-                one_imudata.linear_acceleration.y = imu_msg->acceleration_data.y;
-                one_imudata.linear_acceleration.z = imu_msg->acceleration_data.z;
-                one_imudata.angular_velocity.x = imu_msg->gyro_data.x;
-                one_imudata.angular_velocity.y = imu_msg->gyro_data.y;
-                one_imudata.angular_velocity.z = imu_msg->gyro_data.z;
-
-                // store the imu message
-                imudatas.push_back(one_imudata);
-            }
-        }
-
-        // close the file
-        bag_in.close();
-
-        return true;
-    }
-
-    /**
-     * @brief       Extract gnss solution data from the bag file (ros standard format) and save as RobotGVINS format
-     * @note        1. The gnss solution data to read should be ros standard format
-     *              2. The gnss solution data is saved as RobotGVINS format defaultly
-     *              3. The gnss solution of ros format has no velocity information
-     *              4. If need, the GPS/Linux time will be converted
-     *
-     * @param[in]  char*       bag_infilepath      bag file
-     * @param[in]  string      gnsssol_topic       gnss solution topic
-     * @param[out] list        gnsssol_datas       gnss solution data
-     *
-     * @return     bool      true      extract successfully
-     *                       false     fail to extract
-     */
-    extern bool extract_gnsssol_rosstd_rosbag(const char *bag_infilepath, const std::string &gnsssol_topic, std::list<datastreamio::RobotGVINS_GNSSSol> &gnsssol_datas)
-    {
-        // 1. Open the bag file to read GNSS solution data
-        rosbag::Bag bag_in;
-        bag_in.open(bag_infilepath, rosbag::bagmode::Read);
-        if (!bag_in.isOpen())
-        {
-            printf("open ros bag file to extract data unsuccessfully!\n");
-            return false;
-        }
-
-        // 2. Prepare variables
-        std::vector<std::string> topics;
-        topics.push_back(std::string(gnsssol_topic));
-        rosbag::View view(bag_in, rosbag::TopicQuery(topics));
-
-        // 3. Extract each meassage
-        foreach (rosbag::MessageInstance const m, view)
-        {
-            if (m.instantiate<sensor_msgs::NavSatFix>() != nullptr)
-            {
-                // get gnss solution data
-                sensor_msgs::NavSatFix::ConstPtr gnsssol_msg = m.instantiate<sensor_msgs::NavSatFix>();
-
-                // convert the ros standard format to RobotGVINS format
-                // (1) convert position from LLH to ECEF
-                double LLH[3] = {0.0}, XYZ[3] = {0.0};
-                LLH[0] = gnsssol_msg->latitude * IPS_D2R, LLH[1] = gnsssol_msg->longitude * IPS_D2R, LLH[2] = gnsssol_msg->altitude;
-                gnss_common::LLH2XYZ(LLH, XYZ);
-                // (2) get the position covariance in ENU
-                Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
-                ENUCov(0, 0) = gnsssol_msg->position_covariance[0], ENUCov(0, 1) = gnsssol_msg->position_covariance[1], ENUCov(0, 2) = gnsssol_msg->position_covariance[2];
-                ENUCov(1, 0) = gnsssol_msg->position_covariance[3], ENUCov(1, 1) = gnsssol_msg->position_covariance[4], ENUCov(1, 2) = gnsssol_msg->position_covariance[5];
-                ENUCov(2, 0) = gnsssol_msg->position_covariance[6], ENUCov(2, 1) = gnsssol_msg->position_covariance[7], ENUCov(2, 2) = gnsssol_msg->position_covariance[8];
-                // (3) convert position covariance from ENU to ECEF
-                Eigen::Matrix3d R_nToe = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
-                Eigen::Matrix3d XYZCov = R_nToe * ENUCov * R_nToe.transpose();
-
-                // store the gnss solution data
-                datastreamio::RobotGVINS_GNSSSol one_data;
-                double timestamp = gnsssol_msg->header.stamp.sec + gnsssol_msg->header.stamp.nsec * 1e-9;
-                timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
-                one_data.header.stamp = ros::Time(timestamp);
-                one_data.header.frame_id = gnsssol_msg->header.frame_id;
-                one_data.AmbFix = 5;
-                one_data.DDOP = 1.5;
-                one_data.pos_XYZ[0] = XYZ[0], one_data.pos_XYZ[1] = XYZ[1], one_data.pos_XYZ[2] = XYZ[2];
-                one_data.vel_XYZ[0] = 0.0, one_data.vel_XYZ[1] = 0.0, one_data.vel_XYZ[2] = 0.0;
-                one_data.cov_pos_XYZ[0] = XYZCov(0, 0), one_data.cov_pos_XYZ[1] = XYZCov(0, 1), one_data.cov_pos_XYZ[2] = XYZCov(0, 2);
-                one_data.cov_pos_XYZ[3] = XYZCov(1, 0), one_data.cov_pos_XYZ[4] = XYZCov(1, 1), one_data.cov_pos_XYZ[5] = XYZCov(1, 2);
-                one_data.cov_pos_XYZ[6] = XYZCov(2, 0), one_data.cov_pos_XYZ[7] = XYZCov(2, 1), one_data.cov_pos_XYZ[8] = XYZCov(2, 2);
-                one_data.cov_vel_XYZ[0] = 0.0, one_data.cov_vel_XYZ[1] = 0.0, one_data.cov_vel_XYZ[2] = 0.0;
-                one_data.cov_vel_XYZ[3] = 0.0, one_data.cov_vel_XYZ[4] = 0.0, one_data.cov_vel_XYZ[5] = 0.0;
-                one_data.cov_vel_XYZ[6] = 0.0, one_data.cov_vel_XYZ[7] = 0.0, one_data.cov_vel_XYZ[8] = 0.0;
-
-                gnsssol_datas.push_back(one_data);
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @brief       Extract gnss solution data as IPS pos format file
-     * @note        If need, the GPS/Linux time will be converted
-     *
-     * @param[in]   char*      buffer        buffer to read data
-     * @param[out]  list       soldatas      gnss solutions data
-     *
-     * @return      bool      true       extract successfully
-     *                        false      fail to extract
-
-    */
-    extern bool extract_gnsssol_posformat_txtfile(char *buffer, std::list<dataio_common::Solution_GNSS> &soldatas)
-    {
-        // 1. get solution data from buffer
-        // NOTE: XYZCov stores the XY-Var, XZ-Var, and YZ-Var in order
-        int GPSWeek = 0, Qfactor = 0, AmbFix = 0;
-        double GPSSecond = 0.0, DDOP = 0.0, XYZ[3] = {0.0}, VXYZ[3] = {0.0};
-        double XYZVar[3] = {0.0}, XYZCov[3] = {0.0}, VXYZVar[3] = {0.0}, VXYZCov[3] = {0.0};
-        sscanf(buffer, "%d %lf %d %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-               &GPSWeek, &GPSSecond, &Qfactor, &AmbFix, &DDOP,
-               &XYZ[0], &XYZ[1], &XYZ[2], &XYZVar[0], &XYZVar[1], &XYZVar[2], &XYZCov[0], &XYZCov[1], &XYZCov[2],
-               &VXYZ[0], &VXYZ[1], &VXYZ[2], &VXYZVar[0], &VXYZVar[1], &VXYZVar[2], &VXYZCov[0], &VXYZCov[1], &VXYZCov[2]);
-
-        // 2. store solution data
-        // (1) timestamp
-        Solution_GNSS onedata;
-        onedata.gps_week = GPSWeek;
-        onedata.gps_second = GPSSecond;
-        onedata.timestamp = GPSWeek * 604800.0 + GPSSecond;
-        onedata.pubtime = onedata.timestamp;
-
-        // (2) position and covariance
-        onedata.position_XYZ[0] = XYZ[0], onedata.position_XYZ[1] = XYZ[1], onedata.position_XYZ[2] = XYZ[2];
-        onedata.positioncov_XYZ[0] = XYZVar[0], onedata.positioncov_XYZ[1] = XYZCov[0], onedata.positioncov_XYZ[2] = XYZCov[1];
-        onedata.positioncov_XYZ[3] = XYZCov[0], onedata.positioncov_XYZ[4] = XYZVar[1], onedata.positioncov_XYZ[5] = XYZCov[2];
-        onedata.positioncov_XYZ[6] = XYZCov[1], onedata.positioncov_XYZ[7] = XYZCov[2], onedata.positioncov_XYZ[8] = XYZVar[2];
-
-        // (3) velocity and covairance
-        onedata.velocity_XYZ[0] = VXYZ[0], onedata.velocity_XYZ[1] = VXYZ[1], onedata.velocity_XYZ[2] = VXYZ[2];
-        onedata.velocitycov_XYZ[0] = VXYZVar[0], onedata.velocitycov_XYZ[1] = VXYZCov[0], onedata.velocitycov_XYZ[2] = VXYZCov[1];
-        onedata.velocitycov_XYZ[3] = VXYZCov[0], onedata.velocitycov_XYZ[4] = VXYZVar[1], onedata.velocitycov_XYZ[5] = VXYZCov[2];
-        onedata.velocitycov_XYZ[6] = VXYZCov[1], onedata.velocitycov_XYZ[7] = VXYZCov[2], onedata.velocitycov_XYZ[8] = VXYZVar[2];
-
-        // store the message
-        soldatas.push_back(onedata);
-
-        return true;
-    }
-
-    /**
-     * @brief       Extract gnss solution data from the bag file (KAIST vrs_gps format) and save as RobotGVINS format
-     * @note        1. The gnss solution data to read should be KAIST vrs_gps format
-     *              2. The gnss solution data is saved as RobotGVINS format defaultly
-     *              3. If need, the GPS/Linux time will be converted
-     *
-     * @param[in]  char*       bag_infilepath      bag file
-     * @param[in]  string      gnsssol_topic       gnss solution topic
-     * @param[out] list        gnsssol_datas       gnss solution data
-     *
-     * @return     bool      true      extract successfully
-     *                       false     fail to extract
-     */
-    extern bool extract_gnsssol_kaistvrsgps_rosbag(const char *bag_infilepath, const std::string &gnsssol_topic, std::list<datastreamio::RobotGVINS_GNSSSol> &gnsssol_datas)
-    {
-        // 1. Open the bag file to read GNSS solution data
-        rosbag::Bag bag_in;
-        bag_in.open(bag_infilepath, rosbag::bagmode::Read);
-        if (!bag_in.isOpen())
-        {
-            printf("open ros bag file to extract data unsuccessfully!\n");
-            return false;
-        }
-
-        // 2. Prepare variables
-        std::vector<std::string> topics;
-        topics.push_back(std::string(gnsssol_topic));
-        rosbag::View view(bag_in, rosbag::TopicQuery(topics));
-
-        // 3. Extract each meassage
-        foreach (rosbag::MessageInstance const m, view)
-        {
-            if (m.instantiate<datastreamio::KAIST_VRSGPS>() != nullptr)
-            {
-                // get gnss solution data
-                datastreamio::KAIST_VRSGPS::ConstPtr gnsssol_msg = m.instantiate<datastreamio::KAIST_VRSGPS>();
-
-                // convert the KAIST format to RobotGVINS format
-                // (1) convert position from LLH to ECEF
-                double LLH[3] = {0.0}, XYZ[3] = {0.0};
-                LLH[0] = gnsssol_msg->latitude * IPS_D2R, LLH[1] = gnsssol_msg->longitude * IPS_D2R, LLH[2] = gnsssol_msg->altitude;
-                gnss_common::LLH2XYZ(LLH, XYZ);
-                // (2) get the position covariance in ENU
-                Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
-                ENUCov(0, 0) = pow(gnsssol_msg->lat_std, 2), ENUCov(0, 1) = 0.0, ENUCov(0, 2) = 0.0;
-                ENUCov(1, 0) = 0.0, ENUCov(1, 1) = pow(gnsssol_msg->lon_std, 2), ENUCov(1, 2) = 0.0;
-                ENUCov(2, 0) = 0.0, ENUCov(2, 1) = 0.0, ENUCov(2, 2) = pow(gnsssol_msg->altitude_std, 2);
-                // (3) convert position covariance from ENU to ECEF
-                Eigen::Matrix3d R_nToe = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
-                Eigen::Matrix3d XYZCov = R_nToe * ENUCov * R_nToe.transpose();
-
-                // store the gnss solution data
-                datastreamio::RobotGVINS_GNSSSol one_data;
-                double timestamp = gnsssol_msg->header.stamp.sec + gnsssol_msg->header.stamp.nsec * 1e-9;
-                timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
-                one_data.header.stamp = ros::Time(timestamp);
-                one_data.header.frame_id = gnsssol_msg->header.frame_id;
-                one_data.AmbFix = 5;
-                one_data.DDOP = 1.5;
-                one_data.pos_XYZ[0] = XYZ[0], one_data.pos_XYZ[1] = XYZ[1], one_data.pos_XYZ[2] = XYZ[2];
-                one_data.vel_XYZ[0] = 0.0, one_data.vel_XYZ[1] = 0.0, one_data.vel_XYZ[2] = 0.0;
-                one_data.cov_pos_XYZ[0] = XYZCov(0, 0), one_data.cov_pos_XYZ[1] = XYZCov(0, 1), one_data.cov_pos_XYZ[2] = XYZCov(0, 2);
-                one_data.cov_pos_XYZ[3] = XYZCov(1, 0), one_data.cov_pos_XYZ[4] = XYZCov(1, 1), one_data.cov_pos_XYZ[5] = XYZCov(1, 2);
-                one_data.cov_pos_XYZ[6] = XYZCov(2, 0), one_data.cov_pos_XYZ[7] = XYZCov(2, 1), one_data.cov_pos_XYZ[8] = XYZCov(2, 2);
-                one_data.cov_vel_XYZ[0] = 0.0, one_data.cov_vel_XYZ[1] = 0.0, one_data.cov_vel_XYZ[2] = 0.0;
-                one_data.cov_vel_XYZ[3] = 0.0, one_data.cov_vel_XYZ[4] = 0.0, one_data.cov_vel_XYZ[5] = 0.0;
-                one_data.cov_vel_XYZ[6] = 0.0, one_data.cov_vel_XYZ[7] = 0.0, one_data.cov_vel_XYZ[8] = 0.0;
-
-                gnsssol_datas.push_back(one_data);
-            }
-        }
-
-        // close the file
-        bag_in.close();
-
-        return true;
-    }
-
-    /**
-     * @brief       Extract gnss raw data (observation and ephemris)
-     * @note        1. The gnss observation and ephemris data is saved as RobotGVINS format defaultly
-     *              2. The time system should be GPS time after converison
+     * @brief       The main function to extract GNSS raw data from bag file
+     * @note        1. The GNSS raw data is saved as RobotGVINS format
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
      *
      * @param[in]   char*           infilepath               filepath to read
      * @param[in]   string          rostopic                 topic
      * @param[in]   timesystem      timesys                  timesystem before converison
      * @param[in]   dataformat      datatype                 date format before converison
-     * @param[out]  list            gnss_obsdata             gnss observations data of all satellites in all epochs
-     * @param[out]  list            gnss_ephdata             gnss ephemrtis data of all satellites in all epochs
+     * @param[out]  list            gnss_obsdata             GNSS observations data of all satellites in all epochs
+     * @param[out]  list            gnss_ephdata             GNSS ephemrtis data of all satellites in all epochs
      *
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern bool Extract_GNSSRawData(const char *infilepath, const std::string &rostopic, const dataformat datatype, const dataio_common::timesystem timesys, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata)
+    extern bool Extract_GNSSRawData_ROSBag_MAIN(const char *infilepath, const std::string &rostopic, const dataformat datatype, const dataio_common::timesystem timesys, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata)
     {
         // 1. Open the bag file to read GNSS raw data
         rosbag::Bag bag_in;
@@ -505,16 +340,12 @@ namespace dataio_common
         {
             switch (datatype)
             {
-            case dataformat::VisionRTK_format_01:
-                extract_gnssraw_visionrtk01_bag(msg, timesys, &raw, gnss_obsdata, gnss_ephdata);
+            case dataformat::VisionRTK_Format01:
+                Extract_GNSSRawData_VisionRTK01_ROSBag(msg, timesys, &raw, gnss_obsdata, gnss_ephdata);
                 break;
 
-            case dataformat::VisionRTK_format_02:
-                extract_gnssraw_visionrtk02_bag(msg, timesys, &raw, gnss_obsdata, gnss_ephdata);
-                break;
-
-            default:
-                extract_gnssraw_visionrtk02_bag(msg, timesys, &raw, gnss_obsdata, gnss_ephdata);
+            case dataformat::VisionRTK_Format02:
+                Extract_GNSSRawData_VisionRTK02_ROSBag(msg, timesys, &raw, gnss_obsdata, gnss_ephdata);
                 break;
             }
         }
@@ -529,7 +360,7 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract gnss raw data as VisionRTK format
+     * @brief       Extract gnss raw data as VisionRTK format 01
      * @note        1. If the input timesys is Linux, it should be convert to GPSTime
      *
      * @param[in]   MessageInstance      msg          ros message
@@ -541,7 +372,7 @@ namespace dataio_common
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern void extract_gnssraw_visionrtk01_bag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata)
+    extern void Extract_GNSSRawData_VisionRTK01_ROSBag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata)
     {
         if (msg.instantiate<datastreamio::VisionRTK_GNSSRaw_01>() != nullptr)
         {
@@ -552,24 +383,34 @@ namespace dataio_common
             if (timesys == timesystem::Linux_time)
                 pubtime = pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
+            // FIXME: output information to debug
+            if (0)
+            {
+                std::ofstream outfile("/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                outfile.write(reinterpret_cast<const char *>(gnss_msg->message.data.data()), gnss_msg->message.data.size());
+                outfile.close();
+            }
+
             // decode the raw data
             for (int i = 0; i < gnss_msg->message.data.size(); i++)
             {
                 unsigned char data = gnss_msg->message.data[i];
                 int message_type = input_raw(raw, STRFMT_UBX, data);
 
-                // if decode observation, convert to the IPS struct and store
+                // observation
                 if (message_type == 1)
                 {
                     gnss_common::IPS_OBSDATA oneobs;
                     Convert_GNSSObsStruct_RTKLIB2IPS(raw->obs.data, raw->obs.n, &oneobs);
 
-                    // NOTE: use the receive time to publish message
+                    // NOTE: There is a time delay between message time and receive time of GNSS raw data in VisionRTK.
+                    //       So we use the receive time to publish message to facilitate timestamp matching with other
+                    //       data such as imu data.
                     oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
                     obsdata.push_back(oneobs);
                 }
 
-                // if decode ephmeris data, convert to the IPS struct
+                // ephmeris
                 if (message_type == 2)
                 {
                     gnss_common::IPS_GPSEPH ips_eph[IPS_NSATMAX];
@@ -580,13 +421,13 @@ namespace dataio_common
                         if (ips_eph[i].toc.GPSWeek <= 0)
                             continue;
 
-                        // NOTE: use the pubtime to publish message
+                        // NOTE: use the message timestamp to publish
                         ips_eph[i].pubtime = pubtime;
                         ephdata.push_back(ips_eph[i]);
                     }
                 }
 
-                // skip the valid data
+                // skip the decoded data
                 if (message_type > 0)
                 {
                     i += raw->len;
@@ -596,8 +437,8 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract gnss raw data as VisionRTK format
-     * @note
+     * @brief       Extract gnss raw data as VisionRTK format 02
+     * @note        1. If the input timesys is Linux, it should be convert to GPSTime
      *
      * @param[in]   MessageInstance      msg          ros message
      * @param[in]   timesystem           timesys      time system
@@ -608,89 +449,65 @@ namespace dataio_common
      * @return      bool      true       extract successfully
      *                        false      fail to extract
      */
-    extern void extract_gnssraw_visionrtk02_bag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata)
+    extern void Extract_GNSSRawData_VisionRTK02_ROSBag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata)
     {
-
-        // 2. decode one message
+        // 1. decode one message
         if (msg.instantiate<datastreamio::VisionRTK_GNSSRaw_02>() != nullptr)
         {
-            // get the data pointer
             datastreamio::VisionRTK_GNSSRaw_02::ConstPtr gnss_msg = msg.instantiate<datastreamio::VisionRTK_GNSSRaw_02>();
 
-            // initialize the message type
-            int message_type = -1;
-
-            // use the message time as pubtime (to publish ros message)
+            // use the message timestamp to publish
             double timestamp = gnss_msg->stamp.toSec();
             if (timesys == timesystem::Linux_time)
                 timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
-
-            // FIXME: output information to debug
-            if (0)
-            {
-                std::string filename = "/home/leiwh/Research/Data/Fixposition/20250403/2025-04-03-12-39-17/rosbag/gnss1.ubx";
-                std::ofstream outfile(filename.c_str(), std::ios::binary | std::ios::app);
-                if (outfile)
-                {
-                    outfile.write(reinterpret_cast<const char *>(gnss_msg->data.data()), gnss_msg->data.size());
-                    outfile.close();
-                }
-            }
 
             // decode the raw data
             for (int i = 0; i < gnss_msg->data.size(); i++)
             {
                 unsigned char data = gnss_msg->data[i];
-                message_type = input_raw(raw, STRFMT_UBX, data);
+                int message_type = input_raw(raw, STRFMT_UBX, data);
 
-                // FIXME: output information to debug
-                if (0)
+                // observation
+                if (message_type == 1)
                 {
-                    std::string filename = "/home/leiwh/Research/Data/Fixposition/20250403/2025-04-03-12-39-17/rosbag/gnss1.ubx";
-                    std::ofstream outfile(filename.c_str(), std::ios::binary | std::ios::app);
-                    if (outfile)
+                    gnss_common::IPS_OBSDATA oneobs;
+                    Convert_GNSSObsStruct_RTKLIB2IPS(raw->obs.data, raw->obs.n, &oneobs);
+
+                    // NOTE: use the receive time to publish message
+                    oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
+                    obsdata.push_back(oneobs);
+                }
+
+                // ephmeris
+                if (message_type == 2)
+                {
+                    gnss_common::IPS_GPSEPH ips_eph[IPS_NSATMAX];
+                    Convert_GNSSNavStruct_RTKLIB2IPS(&raw->nav, ips_eph);
+
+                    for (int i = 0; i < IPS_NSATMAX; i++)
                     {
-                        outfile.write(reinterpret_cast<const char *>(&data), sizeof(data));
-                        outfile.close();
+                        if (ips_eph[i].toc.GPSWeek <= 0)
+                            continue;
+
+                        // NOTE: use the message timestamp to publish
+                        ips_eph[i].pubtime = timestamp;
+                        ephdata.push_back(ips_eph[i]);
                     }
                 }
-            }
 
-            // if decode observation, convert to the IPS struct and store
-            if (message_type == 1)
-            {
-                gnss_common::IPS_OBSDATA oneobs;
-                Convert_GNSSObsStruct_RTKLIB2IPS(raw->obs.data, raw->obs.n, &oneobs);
-
-                // NOTE: Use the receive timestamp instead of pubtime to publish message
-                oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
-
-                obsdata.push_back(oneobs);
-            }
-
-            // if decode ephmeris data, convert to the IPS struct
-            if (message_type == 2)
-            {
-                gnss_common::IPS_GPSEPH ips_eph[IPS_NSATMAX];
-                Convert_GNSSNavStruct_RTKLIB2IPS(&raw->nav, ips_eph);
-
-                for (int i = 0; i < IPS_NSATMAX; i++)
+                // skip the decoded data
+                if (message_type > 0)
                 {
-                    if (ips_eph[i].toc.GPSWeek <= 0)
-                        continue;
-
-                    // NOTE: Use the pubtime to publish message
-                    ips_eph[i].pubtime = timestamp;
-                    ephdata.push_back(ips_eph[i]);
+                    i += raw->len;
                 }
             }
         }
     }
 
     /**
-     * @brief       Extract gnss observation data from the rinex 3.0x file and save as IPS struct
-     * @note        1. The gnss observation data to read should be rinex3.0x format
-     *              2. The gnss observation data is saved as IPS struct format defaultly
+     * @brief       Extract GNSS raw data from the rinex 3.0x file
+     * @note        1. The GNSS raw data to read should be rinex3.0x format
+     *              2. The GNSS raw data is saved as IPS struct format
      *
      * @param[in]   char*     rinex_infilepath      rinex format file
      * @param[out]  list      gnss_obsdata          store all observations data in all epochs
@@ -1136,9 +953,9 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract gnss ephemeris data from the rinex 3.0x file and save as IPS struct
-     * @note        1. The gnss observation data to read should be rinex3.0x format
-     *              2. The gnss observation data is saved as IPS struct format defaultly
+     * @brief       Extract GNSS ephemeris data from the rinex 3.0x file
+     * @note        1. The GNSS raw data to read should be rinex3.0x format
+     *              2. The GNSS raw data is saved as IPS struct format
      *
      * @param[in]   char*     rinex_infilepath      rinex format file
      * @param[out]  list      gnss_ephdata          store all ephemeris data in all epochs
@@ -1625,116 +1442,10 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract INS solution data
+     * @brief       The main function to extract GNSS solution data from bag file
      * @note
      *
-     * @param[in]   char*           sol_infilepath       filepath to read data
-     * @param[in]   list            sol_datas            INS solution data
-     * @param[in]   dataformat      datatype             data type
-     * @param[in]   int             infolines            need to skip info lines
-     *
-     * @return      bool      true      extract successfully
-     *                        false     fail to extract
-     */
-    extern bool Extract_INSSolution(const char *sol_infilepath, std::list<dataio_common::Solution_INS> &sol_datas, dataformat datatype, int infolines)
-    {
-        // 1. Open the rinex file
-        FILE *infile = fopen(sol_infilepath, "rt");
-        if (!infile)
-        {
-            printf("Fail to open INS solution data file to read!\n");
-            return false;
-        }
-
-        // 2. Skip info lines
-        char buf[1024] = {'\0'}; // the buffer to store data
-        for (int i = 0; i < infolines; i++)
-            fgets(buf, sizeof(buf), infile);
-
-        // 3. Extract ground-truth data from file
-        while (!feof(infile))
-        {
-            // clear old data and read new data
-            memset(buf, '\0', sizeof(buf));
-            fgets(buf, sizeof(buf), infile);
-
-            // check the length of data
-            int charnum = strlen(buf);
-            if (charnum <= 0)
-                continue;
-
-            // store each data
-            Solution_INS onedata;
-            double R_bTow[9] = {0.0};
-            Eigen::Matrix3d R_bTow_mat = Eigen::Matrix3d::Zero();
-            Eigen::Vector4d q_bTow = Eigen::Vector4d::Zero();
-
-            switch (datatype)
-            {
-            case dataformat::RobotGVINS_format:
-
-                sscanf(buf, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &onedata.gps_week, &onedata.gps_second,
-                       &onedata.position_XYZ[0], &onedata.position_XYZ[1], &onedata.position_XYZ[2],
-                       &onedata.velocity_XYZ[0], &onedata.velocity_XYZ[1], &onedata.velocity_XYZ[2],
-                       &onedata.attitude_Azi[0], &onedata.attitude_Azi[1], &onedata.attitude_Azi[2]);
-
-                M31Scale(IPS_D2R, onedata.attitude_Azi);
-
-                break;
-
-            case dataformat::KAIST_format:
-
-                sscanf(buf, "%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf", &onedata.timestamp,
-                       &onedata.rotation[0], &onedata.rotation[1], &onedata.rotation[2], &onedata.position_XYZ[0],
-                       &onedata.rotation[3], &onedata.rotation[4], &onedata.rotation[5], &onedata.position_XYZ[1],
-                       &onedata.rotation[6], &onedata.rotation[7], &onedata.rotation[8], &onedata.position_XYZ[2]);
-
-                onedata.timestamp = onedata.timestamp * 1e-9 - GPS_LINUX_TIME + LEAP_SECOND;
-                R_bTow_mat = Array2EigenMatrix(onedata.rotation, 3, 3);
-                EigenVector2Array(rot_2_quat(R_bTow_mat), onedata.quaternion);
-
-                break;
-
-            case dataformat::TUM_format:
-
-                sscanf(buf, "%lf %lf %lf %lf %lf %lf %lf %lf", &onedata.timestamp, &onedata.position_XYZ[0], &onedata.position_XYZ[1], &onedata.position_XYZ[2],
-                       &onedata.quaternion[0], &onedata.quaternion[1], &onedata.quaternion[2], &onedata.quaternion[3]);
-
-                onedata.gps_week = int(onedata.timestamp / 604800.0);
-                onedata.gps_second = fmod(onedata.timestamp, 604800.0);
-                q_bTow = Array2EigenVector(onedata.quaternion, 4);
-                R_bTow_mat = quat_2_Rot(q_bTow);
-                EigenMatrix2Array(R_bTow_mat, R_bTow);
-                Rbl2Attitude(R_bTow, onedata.attitude_Azi);
-
-                break;
-
-            case dataformat::IPS_format:
-
-                sscanf(buf, "%d %lf %lf %lf %lf %*d %*s %*s %*s %lf %lf %lf %*lf %*lf %*lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %*lf %d %d %d %d %d %d %lf %lf %lf",
-                       &onedata.gps_week, &onedata.gps_second, &onedata.position_LLH[0], &onedata.position_LLH[1], &onedata.position_LLH[2],
-                       &onedata.position_XYZ[0], &onedata.position_XYZ[1], &onedata.position_XYZ[2], &onedata.velocity_XYZ[0], &onedata.velocity_XYZ[1], &onedata.velocity_XYZ[2],
-                       &onedata.velocity_ENU[0], &onedata.velocity_ENU[1], &onedata.velocity_ENU[2], &onedata.attitude_Azi[0], &onedata.attitude_Azi[1], &onedata.attitude_Azi[2],
-                       &onedata.satnum[0], &onedata.satnum[1], &onedata.satnum[2], &onedata.satnum[3], &onedata.satnum[4], &onedata.satnum[5], &onedata.DOP[0], &onedata.DOP[1], &onedata.DOP[2]);
-
-                onedata.timestamp = onedata.gps_week * 604800.0 + onedata.gps_second;
-
-                break;
-            }
-
-            sol_datas.push_back(onedata);
-        }
-
-        fclose(infile);
-
-        return true;
-    }
-
-    /**
-     * @brief       Extract GNSS solution data from bag file
-     * @note
-     *
-     * @param[in]   char*           bag_infilepath       filepath to read data
+     * @param[in]   char*           bagfile              bag filepath
      * @param[in]   list            sol_datas            GNSS solution data
      * @param[in]   string          gnsssol_topic        ros topic
      * @param[in]   dataformat      datatype             data type
@@ -1743,13 +1454,13 @@ namespace dataio_common
      * @return      bool      true      extract successfully
      *                        false     fail to extract
      */
-    extern bool Extract_GNSSSolution_ROSBag(const char *infilepath, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys)
+    extern bool Extract_GNSSSolution_ROSBag_MAIN(const char *bagfile, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys)
     {
         // 1. Open the bag file to read GNSS solution data
         rosbag::Bag bag_in;
         try
         {
-            bag_in.open(infilepath, rosbag::bagmode::Read);
+            bag_in.open(bagfile, rosbag::bagmode::Read);
         }
         catch (const rosbag::BagException &e)
         {
@@ -1768,27 +1479,13 @@ namespace dataio_common
             Solution_GNSS onedata;
             switch (datatype)
             {
-            case dataformat::RobotGVINS_format:
-                extract_gnsssol_robotgvins_rosbag(msg, onedata, timesys);
+            case dataformat::VisionRTK_Format01:
+                Extract_GNSSSolution_VisionRTK01_ROSBag(msg, onedata, timesys);
                 soldatas.push_back(onedata);
                 break;
 
-            case dataformat::ROSstd_format:
-
-                break;
-
-            case dataformat::VisionRTK_format_01:
-                extract_gnsssol_visionrtk01_rosbag(msg, onedata, timesys);
-                soldatas.push_back(onedata);
-                break;
-
-            case dataformat::VisionRTK_format_02:
-                extract_gnsssol_visionrtk02_rosbag(msg, onedata, timesys);
-                soldatas.push_back(onedata);
-                break;
-
-            default:
-                extract_gnsssol_robotgvins_rosbag(msg, onedata, timesys);
+            case dataformat::VisionRTK_Format02:
+                Extract_GNSSSolution_VisionRTK02_ROSBag(msg, onedata, timesys);
                 soldatas.push_back(onedata);
                 break;
             }
@@ -1800,7 +1497,7 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract GNSS solution data as RobotGVINS format
+     * @brief       Extract GNSS solution data as VisonRTK 01 Format
      * @note
      *
      * @param[in]   MessageInstance      msg          ros message
@@ -1809,52 +1506,15 @@ namespace dataio_common
      *
      * @return
      */
-    extern void extract_gnsssol_robotgvins_rosbag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys)
-    {
-        if (msg.instantiate<datastreamio::RobotGVINS_GNSSSol>() != nullptr)
-        {
-
-            auto sol_msg = msg.instantiate<datastreamio::RobotGVINS_GNSSSol>();
-
-            // store data body
-            onedata.timestamp = sol_msg->header.stamp.toSec();
-
-            // if need, convert the time timestamp from Linux time to GPS time
-            if (timesys == dataio_common::timesystem::Linux_time)
-                onedata.timestamp = onedata.timestamp - GPS_LINUX_TIME + LEAP_SECOND;
-
-            for (int i = 0; i < 3; i++)
-            {
-                onedata.position_XYZ[i] = sol_msg->pos_XYZ[i];
-                onedata.velocity_XYZ[i] = sol_msg->vel_XYZ[i];
-            }
-            for (int i = 0; i < 9; i++)
-            {
-                onedata.positioncov_XYZ[i] = sol_msg->cov_pos_XYZ[i];
-                onedata.velocitycov_XYZ[i] = sol_msg->cov_vel_XYZ[i];
-            }
-        }
-    }
-
-    /**
-     * @brief       Extract GNSS solution data as VisonRTK format
-     * @note
-     *
-     * @param[in]   MessageInstance      msg          ros message
-     * @param[out]  Solution_GNSS        onedata      GNSS solution data
-     * @param[in]   timesystem           timesys      time system
-     *
-     * @return
-     */
-    extern void extract_gnsssol_visionrtk01_rosbag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys)
+    extern void Extract_GNSSSolution_VisionRTK01_ROSBag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys)
     {
         if (msg.instantiate<datastreamio::VisionRTK_GNSSStatus_01>() != nullptr)
         {
             auto sol_msg = msg.instantiate<datastreamio::VisionRTK_GNSSStatus_01>();
 
-            // publish timestamp
+            // use the message timestamp to publish
+            // NOTE: if need, convert the time timestamp from Linux time to GPS time
             onedata.pubtime = sol_msg->header.stamp.toSec();
-            // if need, convert the time timestamp from Linux time to GPS time
             if (timesys == dataio_common::timesystem::Linux_time)
                 onedata.pubtime = onedata.pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
@@ -1883,7 +1543,7 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract GNSS solution data as VisonRTK format
+     * @brief       Extract GNSS solution data as VisonRTK 02 Format
      * @note
      *
      * @param[in]   MessageInstance      msg          ros message
@@ -1892,15 +1552,15 @@ namespace dataio_common
      *
      * @return
      */
-    extern void extract_gnsssol_visionrtk02_rosbag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys)
+    extern void Extract_GNSSSolution_VisionRTK02_ROSBag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys)
     {
         if (msg.instantiate<datastreamio::VisionRTK_GNSSStatus_02>() != nullptr)
         {
             auto sol_msg = msg.instantiate<datastreamio::VisionRTK_GNSSStatus_02>();
 
-            // publish timestamp
+            // use the message timestamp to publish
+            // NOTE: if need, convert the time timestamp from Linux time to GPS time
             onedata.pubtime = sol_msg->header.stamp.toSec();
-            // if need, convert the time timestamp from Linux time to GPS time
             if (timesys == dataio_common::timesystem::Linux_time)
                 onedata.pubtime = onedata.pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
@@ -1974,17 +1634,62 @@ namespace dataio_common
 
             switch (datatype)
             {
-            case dataformat::IPS_format:
-                extract_gnsssol_posformat_txtfile(buffer, soldatas);
-                break;
-
-            default:
-                extract_gnsssol_posformat_txtfile(buffer, soldatas);
+            case dataformat::IPS_Format:
+                Extract_GNSSSolution_IPSPOS_TXTFile(buffer, soldatas);
                 break;
             }
         }
 
         fclose(infile);
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract gnss solution data as IPS pos format file
+     * @note        If need, the GPS/Linux time will be converted
+     *
+     * @param[in]   char*      buffer        buffer to read data
+     * @param[out]  list       soldatas      gnss solutions data
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+
+    */
+    extern bool Extract_GNSSSolution_IPSPOS_TXTFile(char *buffer, std::list<dataio_common::Solution_GNSS> &soldatas)
+    {
+        // 1. get solution data from buffer
+        // NOTE: XYZCov stores the XY-Var, XZ-Var, and YZ-Var in order
+        int GPSWeek = 0, Qfactor = 0, AmbFix = 0;
+        double GPSSecond = 0.0, DDOP = 0.0, XYZ[3] = {0.0}, VXYZ[3] = {0.0};
+        double XYZVar[3] = {0.0}, XYZCov[3] = {0.0}, VXYZVar[3] = {0.0}, VXYZCov[3] = {0.0};
+        sscanf(buffer, "%d %lf %d %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+               &GPSWeek, &GPSSecond, &Qfactor, &AmbFix, &DDOP,
+               &XYZ[0], &XYZ[1], &XYZ[2], &XYZVar[0], &XYZVar[1], &XYZVar[2], &XYZCov[0], &XYZCov[1], &XYZCov[2],
+               &VXYZ[0], &VXYZ[1], &VXYZ[2], &VXYZVar[0], &VXYZVar[1], &VXYZVar[2], &VXYZCov[0], &VXYZCov[1], &VXYZCov[2]);
+
+        // 2. store solution data
+        // (1) timestamp
+        Solution_GNSS onedata;
+        onedata.gps_week = GPSWeek;
+        onedata.gps_second = GPSSecond;
+        onedata.timestamp = GPSWeek * 604800.0 + GPSSecond;
+        onedata.pubtime = onedata.timestamp;
+
+        // (2) position and covariance
+        onedata.position_XYZ[0] = XYZ[0], onedata.position_XYZ[1] = XYZ[1], onedata.position_XYZ[2] = XYZ[2];
+        onedata.positioncov_XYZ[0] = XYZVar[0], onedata.positioncov_XYZ[1] = XYZCov[0], onedata.positioncov_XYZ[2] = XYZCov[1];
+        onedata.positioncov_XYZ[3] = XYZCov[0], onedata.positioncov_XYZ[4] = XYZVar[1], onedata.positioncov_XYZ[5] = XYZCov[2];
+        onedata.positioncov_XYZ[6] = XYZCov[1], onedata.positioncov_XYZ[7] = XYZCov[2], onedata.positioncov_XYZ[8] = XYZVar[2];
+
+        // (3) velocity and covairance
+        onedata.velocity_XYZ[0] = VXYZ[0], onedata.velocity_XYZ[1] = VXYZ[1], onedata.velocity_XYZ[2] = VXYZ[2];
+        onedata.velocitycov_XYZ[0] = VXYZVar[0], onedata.velocitycov_XYZ[1] = VXYZCov[0], onedata.velocitycov_XYZ[2] = VXYZCov[1];
+        onedata.velocitycov_XYZ[3] = VXYZCov[0], onedata.velocitycov_XYZ[4] = VXYZVar[1], onedata.velocitycov_XYZ[5] = VXYZCov[2];
+        onedata.velocitycov_XYZ[6] = VXYZCov[1], onedata.velocitycov_XYZ[7] = VXYZCov[2], onedata.velocitycov_XYZ[8] = VXYZVar[2];
+
+        // store the message
+        soldatas.push_back(onedata);
 
         return true;
     }

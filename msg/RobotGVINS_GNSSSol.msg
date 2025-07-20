@@ -7,7 +7,7 @@
 ########################################################################################################################
 
 # Sequence, timestamp, frame ID
-# - Note that the header.stamp is defined as GPSTime
+# Note that the header.stamp is defined as GPSTime
 Header header       # publish timestamp
 float64 timestamp   # signal receive time
 

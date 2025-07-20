@@ -14,63 +14,107 @@ namespace dataio_common
 {
 
     /**
-     * @brief       Convert one gnss solution data from RobotGVINS format to ROS standard format
-     * @note        1. It is used to process observation data in one epoch
+     * @brief       The main function to convert GNSS solution data format
+     * @note
      *
-     * @param[in]   RobotGVINS_GNSSSol *      robotdata         gnss solution data in RobotGVINS format
-     * @param[in]   NavSatFix                 rosdata           gnss solution data in ros standard format
+     * @param[in]   list            sol_datas     GNSS solution data
+     * @param[in]   dataformat      src_type      data format before conversion
+     * @param[in]   dataformat      dst_type      data format after conversion
      *
-     * @return
+     * @return      bool      true       convert successfully
+     *                        false      fail to convert
      */
-    void Convert_GNSSSolStruct_Onedata_RobotGVINS2ROSFormat(const datastreamio::RobotGVINS_GNSSSol *robotdata, sensor_msgs::NavSatFix &rosdata)
+    extern bool Convert_GNSSSolution_MAIN(std::list<Solution_GNSS> &sol_datas, const dataformat src_type, const dataformat dst_type)
     {
+        if (sol_datas.size() <= 0 || src_type == dst_type)
+            return false;
 
-        // header stamp
-        rosdata.header = robotdata->header;
+        // 1. Convert each data from VisionRTK_Format01
+        if (src_type == dataio_common::dataformat::VisionRTK_Format01)
+        {
+            switch (dst_type)
+            {
+            case dataio_common::dataformat::RobotGVINS_Format:
+                Convert_GNSSSolution_VisionRTK2RobotGVINS(sol_datas);
+                break;
+            }
+        }
 
-        // convert position from XYZ to LLH
-        double XYZ[3] = {0.0}, LLH[3] = {0.0};
-        XYZ[0] = robotdata->pos_XYZ[0], XYZ[1] = robotdata->pos_XYZ[1], XYZ[2] = robotdata->pos_XYZ[2];
-        gnss_common::XYZ2LLH(XYZ, LLH);
-        rosdata.latitude = LLH[0] * IPS_R2D, rosdata.longitude = LLH[1] * IPS_R2D, rosdata.altitude = LLH[2];
-
-        // convert the position covariance from ECEF to ENU
-        // (1) get the position covariance in ECEF
-        Eigen::Matrix3d XYZCov = Eigen::Matrix3d::Zero();
-        XYZCov(0, 0) = robotdata->cov_pos_XYZ[0], XYZCov(0, 1) = robotdata->cov_pos_XYZ[1], XYZCov(0, 2) = robotdata->cov_pos_XYZ[2];
-        XYZCov(1, 0) = robotdata->cov_pos_XYZ[3], XYZCov(1, 1) = robotdata->cov_pos_XYZ[4], XYZCov(1, 2) = robotdata->cov_pos_XYZ[5];
-        XYZCov(2, 0) = robotdata->cov_pos_XYZ[6], XYZCov(2, 1) = robotdata->cov_pos_XYZ[7], XYZCov(2, 2) = robotdata->cov_pos_XYZ[8];
-        // (2) convert position covariance to ENU
-        Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
-        Eigen::Matrix3d ENUCov = R_eTon * XYZCov * (R_eTon.transpose());
-        // (3) get the position covariance in ENU
-        rosdata.position_covariance[0] = ENUCov(0, 0), rosdata.position_covariance[1] = ENUCov(0, 1), rosdata.position_covariance[2] = ENUCov(0, 2);
-        rosdata.position_covariance[3] = ENUCov(1, 0), rosdata.position_covariance[4] = ENUCov(1, 1), rosdata.position_covariance[5] = ENUCov(1, 2);
-        rosdata.position_covariance[6] = ENUCov(2, 0), rosdata.position_covariance[7] = ENUCov(2, 1), rosdata.position_covariance[8] = ENUCov(2, 2);
+        return true;
     }
 
     /**
-     * @brief       Convert one gnss solution data from RobotGVINS format to ROS standard format
-     * @note
+     * @brief       Convert GNSS solution data from VisionRTK format to RobotGVINS format
+     * @note        1. GNSS velocity is calculated by position difference
+     *              2. The position and velocity covariance is converted from ENU to XYZ
      *
-     * @param[in]   list      robotdata      gnss solution data in RobotGVINS format
-     * @param[out]  list      robotdata      gnss solution data in ros standard format
+     * @param[in]   list      sol_datas      GNSS solution data
+     * @param[out]
      *
-     * @return
+     * @return      bool      true       convert successfully
+     *                        false     fail to convert
      */
-    extern void Convert_GNSSSolStruct_Alldata_RobotGVINS2ROSFormat(const std::list<datastreamio::RobotGVINS_GNSSSol> &robotdata, std::list<sensor_msgs::NavSatFix> &rosdata)
+    extern bool Convert_GNSSSolution_VisionRTK2RobotGVINS(std::list<Solution_GNSS> &sol_datas)
     {
-        if (robotdata.size() <= 0)
-            return;
+        if (sol_datas.size() < 2)
+            return false;
 
-        for (auto iter : robotdata)
+        // 1. get the time interval
+        auto first_sol = sol_datas.begin();
+        auto second_sol = ++sol_datas.begin();
+        double deltaT = second_sol->timestamp - first_sol->timestamp;
+
+        // 2. the last ENU position to calculate velocity
+        double lastENU[3] = {0.0}, lastENUacc[3] = {0.0};
+        M31EQU(sol_datas.begin()->position_ENU, lastENU);
+        lastENUacc[0] = first_sol->position_acce;
+        lastENUacc[1] = first_sol->position_accn;
+        lastENUacc[2] = first_sol->position_accu;
+
+        // 3. convert each solution data
+        for (auto &iter : sol_datas)
         {
-            sensor_msgs::NavSatFix one_msg;
-            Convert_GNSSSolStruct_Onedata_RobotGVINS2ROSFormat(&iter, one_msg);
-            rosdata.push_back(one_msg);
+            // LLH to XYZ
+            double LLH[3] = {0.0}, XYZ[3] = {0.0};
+            M31EQU(iter.position_LLH, LLH);
+            gnss_common::LLH2XYZ(LLH, XYZ);
+            M31EQU(XYZ, iter.position_XYZ);
+
+            // position cov from horizontal/vertical to XYZ
+            Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
+            ENUCov(0, 0) = pow(iter.position_acch, 2) / 2.0;
+            ENUCov(1, 1) = pow(iter.position_acch, 2) / 2.0;
+            ENUCov(2, 2) = pow(iter.position_accv, 2);
+            Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
+            Eigen::Matrix3d XYZCov = (R_eTon.transpose()) * ENUCov * R_eTon;
+            EigenMatrix2Array(XYZCov, iter.positioncov_XYZ);
+
+            // calculate velocity from relative postion vector
+            iter.velocity_ENU[0] = (iter.position_ENU[0] - lastENU[0]) / deltaT;
+            iter.velocity_ENU[1] = (iter.position_ENU[1] - lastENU[1]) / deltaT;
+            iter.velocity_ENU[2] = (iter.position_ENU[2] - lastENU[2]) / deltaT;
+
+            // convert velocity from ENU to XYZ
+            Eigen::Vector3d VENU = Array2EigenVector(iter.velocity_ENU, 3);
+            Eigen::Vector3d VXYZ = (R_eTon.transpose()) * VENU;
+            EigenVector2Array(VXYZ, iter.velocity_XYZ);
+
+            // convert velocity cov from horizontal/vertical to XYZ
+            Eigen::Matrix3d VENUCov = Eigen::Matrix3d::Zero();
+            VENUCov(0, 0) = pow(iter.position_acce / deltaT, 2) + pow(lastENUacc[0] / deltaT, 2);
+            VENUCov(1, 1) = pow(iter.position_accn / deltaT, 2) + pow(lastENUacc[1] / deltaT, 2);
+            VENUCov(2, 2) = pow(iter.position_accu / deltaT, 2) + pow(lastENUacc[2] / deltaT, 2);
+            Eigen::Matrix3d VXYZCov = (R_eTon.transpose()) * VENUCov * R_eTon;
+            EigenMatrix2Array(VXYZCov, iter.velocitycov_XYZ);
+
+            // update the last ENU position
+            M31EQU(iter.position_ENU, lastENU);
+            lastENUacc[0] = iter.position_acce;
+            lastENUacc[1] = iter.position_accn;
+            lastENUacc[2] = iter.position_accu;
         }
 
-        return;
+        return true;
     }
 
     /**
@@ -203,8 +247,6 @@ namespace dataio_common
 
         // timestamp
         robotdata.timestamp = ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec;
-        // robotdata.header.stamp = ros::Time(ipsdata->pubtime); // FIXME: need to delete
-        // robotdata.header.stamp = ros::Time(ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec); // FIXME: need to delete
 
         // observation info
         robotdata.flag = ipsdata->flag;
@@ -382,7 +424,6 @@ namespace dataio_common
         int sys = IPS_SYSNON;
         int prn = ipsdata->prn;                      // GNSS prn in IPS program
         int sat = gnss_common::satprn2no(prn, &sys); // GNSS prn for each system
-        // robotdata.header.stamp = ros::Time(ipsdata->pubtime); // the timestamp to publish ros message // FIXME: need to delete
 
         // get the data body
         robotdata.prn = ipsdata->prn;
@@ -483,189 +524,4 @@ namespace dataio_common
         }
     }
 
-    /**
-     * @brief       Convert INS solution data
-     * @note        The data format should be RobotGVINS
-     *
-     * @param[in]   list      sol_datas      INS solution data
-     *
-     * @return      bool      true       convert successfully
-     *                        false      fail to convert
-     */
-    extern bool Convert_INSSolution_RobotGVINS(std::list<Solution_INS> &sol_datas)
-    {
-        if (sol_datas.size() <= 0)
-            return false;
-
-        // // 1. get the initial position as the origin
-        // Eigen::Vector3d origin_position = Eigen::Vector3d::Zero();
-        // origin_position << sol_datas.front().position[0], sol_datas.front().position[1], sol_datas.front().position[2];
-
-        // for (auto &iter : sol_datas)
-        // {
-        //     // 2.1 compute the GPS time
-        //     iter.timestamp = iter.gps_week * 604800 + iter.gps_second;
-
-        //     // 2.2 compute the rotation matrix from ecef to enu
-        //     double XYZ[3] = {0.0}, LLH[3] = {0.0}, R_eTon[9] = {0.0};
-        //     Eigen::MatrixXd R_eTon_mat = Eigen::Matrix3d::Zero();
-
-        //     XYZ[0] = iter.position[0], XYZ[1] = iter.position[1], XYZ[2] = iter.position[2];
-        //     gnss_common::XYZ2LLH(XYZ, LLH);
-        //     dataio_common::Rxyz2enu(LLH, R_eTon);
-        //     R_eTon_mat = dataio_common::Array2EigenMatrix(R_eTon, 3, 3);
-
-        //     // 2.3 position
-        //     Eigen::Vector3d position = Eigen::Vector3d::Zero();
-        //     position << iter.position[0], iter.position[1], iter.position[2];
-        //     Eigen::Vector3d position_nav = R_eTon_mat * (position - origin_position);
-        //     iter.position[0] = position_nav(0), iter.position[1] = position_nav(1), iter.position[2] = position_nav(2);
-
-        //     // 2.4 velocity
-        //     Eigen::Vector3d velocity = Eigen::Vector3d::Zero();
-        //     velocity << iter.velocity[0], iter.velocity[1], iter.velocity[2];
-        //     Eigen::Vector3d velocity_nav = R_eTon_mat * velocity;
-        //     iter.velocity[0] = velocity_nav(0), iter.velocity[1] = velocity_nav(1), iter.velocity[2] = velocity_nav(2);
-
-        //     // 2.5 convert attitude to rotation matrix and quaternion
-        //     double azimuth[3] = {0.0}, attitude[3] = {0.0}, R_bToe[9] = {0.0};
-        //     azimuth[0] = iter.attitude[0], azimuth[1] = iter.attitude[1], azimuth[2] = iter.attitude[2];
-        //     dataio_common::Azimuth2Attitude(azimuth, attitude);
-        //     dataio_common::Attitude2Rbe(attitude, LLH, R_bToe);
-        //     Eigen::Matrix3d R_bToe_mat = dataio_common::Array2EigenMatrix(R_bToe, 3, 3);
-        //     Eigen::Matrix3d R_bTon_mat = R_eTon_mat * R_bToe_mat;
-        //     dataio_common::EigenMatrix2Array(R_bTon_mat, iter.rotation);
-
-        //     Eigen::Vector4d q_bTon = dataio_common::rot_2_quat(R_bTon_mat);
-        //     dataio_common::EigenVector2Array(q_bTon, iter.quaternion);
-        // }
-
-        return true;
-    }
-
-    /**
-     * @brief       Convert GNSS solution data format
-     * @note
-     *
-     * @param[in]   list            sol_datas        GNSS solution data
-     * @param[in]   dataformat      origin_type      data format after conversion
-     * @param[in]   dataformat      target_type      data format after conversion
-     *
-     * @return      bool      true       convert successfully
-     *                        false      fail to convert
-     */
-    extern bool Convert_GNSSSolution(std::list<Solution_GNSS> &sol_datas, const dataformat origin_type, const dataformat target_type)
-    {
-        if (sol_datas.size() <= 0 || origin_type == target_type)
-        {
-            return false;
-        }
-
-        ///< Convert each data
-        if (origin_type == dataio_common::dataformat::VisionRTK_format_01)
-        {
-            switch (origin_type)
-            {
-            case dataio_common::dataformat::RobotGVINS_format:
-                convert_gnsssol_visionrtk2robotgvins(sol_datas);
-                break;
-
-            default:
-                convert_gnsssol_visionrtk2robotgvins(sol_datas);
-                break;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @brief       Convert GNSS solution data from VisionRTK format to RobotGVINS format
-     * @note
-     *
-     * @param[in]   list      sol_datas      GNSS solution data
-     *
-     * @return
-     */
-    extern bool convert_gnsssol_visionrtk2robotgvins(std::list<Solution_GNSS> &sol_datas)
-    {
-
-        if (sol_datas.size() < 2)
-        {
-            return false;
-        }
-
-        // get the time interval
-        auto first_sol = sol_datas.begin();
-        auto second_sol = ++sol_datas.begin();
-        double deltaT = second_sol->timestamp - first_sol->timestamp;
-
-        // the last ENU position to calculate velocity
-        double lastENU[3] = {0.0}, lastENUacc[3] = {0.0};
-        M31EQU(sol_datas.begin()->position_ENU, lastENU);
-        lastENUacc[0] = first_sol->position_acce;
-        lastENUacc[1] = first_sol->position_accn;
-        lastENUacc[2] = first_sol->position_accu;
-
-        // convert each solution data
-        for (auto &iter : sol_datas)
-        {
-            // convert position from LLH to XYZ
-            double LLH[3] = {0.0}, XYZ[3] = {0.0};
-            LLH[0] = iter.position_LLH[0];
-            LLH[1] = iter.position_LLH[1];
-            LLH[2] = iter.position_LLH[2];
-            gnss_common::LLH2XYZ(LLH, XYZ);
-            M31EQU(XYZ, iter.position_XYZ);
-
-            // convert position cov from horizontal/vertical to XYZ
-            Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
-            ENUCov(0, 0) = pow(iter.position_acch, 2) / 2.0;
-            ENUCov(1, 1) = pow(iter.position_acch, 2) / 2.0;
-            ENUCov(2, 2) = pow(iter.position_accv, 2);
-            Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
-            Eigen::Matrix3d XYZCov = (R_eTon.transpose()) * ENUCov * R_eTon;
-            EigenMatrix2Array(XYZCov, iter.positioncov_XYZ);
-
-            // calculate velocity from relative postion vector
-            iter.velocity_ENU[0] = (iter.position_ENU[0] - lastENU[0]) / deltaT;
-            iter.velocity_ENU[1] = (iter.position_ENU[1] - lastENU[1]) / deltaT;
-            iter.velocity_ENU[2] = (iter.position_ENU[2] - lastENU[2]) / deltaT;
-
-            // convert velocity from ENU to XYZ
-            Eigen::Vector3d VENU = Array2EigenVector(iter.velocity_ENU, 3);
-            Eigen::Vector3d VXYZ = (R_eTon.transpose()) * VENU;
-            EigenVector2Array(VXYZ, iter.velocity_XYZ);
-
-            // convert velocity cov from horizontal/vertical to XYZ
-            Eigen::Matrix3d VENUCov = Eigen::Matrix3d::Zero();
-            VENUCov(0, 0) = pow(iter.position_acce / deltaT, 2) + pow(lastENUacc[0] / deltaT, 2);
-            VENUCov(1, 1) = pow(iter.position_accn / deltaT, 2) + pow(lastENUacc[1] / deltaT, 2);
-            VENUCov(2, 2) = pow(iter.position_accu / deltaT, 2) + pow(lastENUacc[2] / deltaT, 2);
-            Eigen::Matrix3d VXYZCov = (R_eTon.transpose()) * VENUCov * R_eTon;
-            EigenMatrix2Array(VXYZCov, iter.velocitycov_XYZ);
-
-            // update the last ENU position
-            M31EQU(iter.position_ENU, lastENU);
-            lastENUacc[0] = iter.position_acce;
-            lastENUacc[1] = iter.position_accn;
-            lastENUacc[2] = iter.position_accu;
-        }
-    }
-
-    /**
-     * @brief       Convert GNSS solution data from VisionRTK format to RobotGVINS format
-     * @note
-     *
-     * @param[in]   list      sol_datas      GNSS solution data
-     *
-     * @return
-     */
-    extern bool convert_gnsssol_ipsposfmt2robotgvins(std::list<Solution_GNSS> &sol_datas)
-    {
-        if (sol_datas.size() < 2)
-        {
-            return false;
-        }
-    }
 }

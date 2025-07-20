@@ -23,11 +23,6 @@ namespace dataio_common
      */
     extern bool Receive_and_Publish_GNSSRawData(const char *IP, const int Port, const int format, const std::string &obs_topic, const std::string &eph_topic, const char *filename);
     extern bool Extract_GNSSRawdata_RAW2IPSFormat(const char *buffer, int bytes_received, int dataformat, gnss_common::IPS_OBSDATA &gnss_obsdata, gnss_common::IPS_GPSEPH &gnss_ephdata);
-
-    extern bool Extract_GNSSRawdata_RTIERTCM3(const char *buffer, int bytes_received, gnss_common::IPS_OBSDATA &gnss_obsdata, gnss_common::IPS_GPSEPH &gnss_ephdata);
-    extern bool Extract_GNSSRawdata_RTIEUBX(unsigned char *buffer, int bytes_received, gnss_common::IPS_OBSDATA &gnss_obsdata, gnss_common::IPS_GPSEPH &gnss_ephdata);
-    extern bool Receive_and_Publish_GNSSData_BaseStation(const char *filename = NULL);
-    extern bool Receive_and_Publish_GNSSData_RoveStation(const char *filename = NULL);
 }
 
 #endif

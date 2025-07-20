@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(datastreamio)
 
-# set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
+# set(CMAKE_BUILD_TYPE "Debug")
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -226,23 +226,29 @@ include_directories(
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+## include header files
 include_directories(include)
 include_directories(${PROJECT_SOURCE_DIR}/../../devel/include/${PROJECT_NAME})
 
-# include source files to build the libraries
+## include source files
 aux_source_directory(src/datastream DIR_DATAIOSRC)
 aux_source_directory(src/rtklib DIR_RTKLIBSRC)
 list(APPEND DIR_ALL ${DIR_DATAIOSRC}
                     ${DIR_RTKLIBSRC})
 
-# build the library
+## generate the library using source files
 add_library(${PROJECT_NAME}_lib SHARED ${DIR_ALL})
 
+## link with third party libraries
 target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
+## generate the executable program and link with the library
+# process Real-Time data stream from Vision-RTK2
+add_executable(rtiemode_VisionRTK src/RTIENode_VisionRTK.cpp)
+target_link_libraries(rtiemode_VisionRTK ${PROJECT_NAME}_lib)
+add_dependencies(rtiemode_VisionRTK ${PROJECT_NAME}_generate_messages_cpp)
 
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
+# process Vision-RTK data
+add_executable(bagconvert_VisionRTK src/Extract_and_Write_VisionRTK.cpp)
+target_link_libraries(bagconvert_VisionRTK ${PROJECT_NAME}_lib)
+add_dependencies(bagconvert_VisionRTK ${PROJECT_NAME}_generate_messages_cpp)
