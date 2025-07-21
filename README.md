@@ -22,18 +22,18 @@ OpenCV: both version 3/4 are avariable
 
 ## 2. Build
 Clone the project to '~/catkin_ws/src'
-'''
+```
     cd ~/catkin_ws
     catkin_make
-'''
+```
 
 ## 3. Example
 ### 3.1 extract VisionRTK data, convert to RobotGVINS format and write to rosbag
-'''
+```
     cd ~/catkin_ws
     source devel/setup.bash
     rosrun datastreamio bagconvert_VisionRTK src/datastream_io/config/bagconvert_VisionRTK.yaml
-'''
+```
 
 
 ## 4. Acknowledgements
