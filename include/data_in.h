@@ -22,7 +22,10 @@ namespace dataio_common
     /**
      * @brief       Extract imu data
      */
+    ///< Bag file
     extern bool Extract_IMUdata_ROSBag(const char *bag_infilepath, const std::string &imu_topic, std::list<sensor_msgs::Imu> &imudatas, const dataio_common::timesystem timesys);
+    ///< Txt file
+    extern bool Extract_IMUdata_TXTFile(const char *infilepath, std::list<sensor_msgs::Imu> &imudatas, int infolines);
 
     /**
      * @brief       Extract image data
@@ -51,6 +54,12 @@ namespace dataio_common
     ///< Txt file
     extern bool Extract_GNSSObsData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
     extern bool Extract_GNSSEphData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata);
+
+    /**
+     * @brief       Extract INS Solution data
+     */
+    extern bool Extract_INSSolution_TXTFile_MAIN(const char *infilepath, std::list<Solution_INS> &sol_datas, const dataformat format, const timesystem timesys, const int infolines);
+    extern bool Extract_INSSolution_TXTFile_GICILIB(const char *buffer, Solution_INS &sol_datas, const timesystem timesys);
 }
 
 #endif

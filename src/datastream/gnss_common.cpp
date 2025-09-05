@@ -548,7 +548,8 @@ namespace gnss_common
         }
         else if (sys == SYS_QZS)
         {
-            sat -= (MINPRNQZS - 1); // FIXME: add codes to debug (added by leiwh)
+            // FIXME: add codes to debug (leiwh)
+            sat -= (MINPRNQZS - 1);
             if (sat <= IPS_NSATQZS)
                 prn = IPS_PRNQZS + sat;
         }
@@ -567,13 +568,14 @@ namespace gnss_common
      * @brief       Find the frequency and channel
      * @note
      *
-     * @param[in]   int      sys      rtklib prn
-     * @param[in]   char*    type[5]
-     * @param[in]   obsd_t   obs      observation in rtklib
+     * @param[in]   int        sys             rtklib prn
+     * @param[in]   char*      type[5]
+     * @param[in]   char       channel[5]
+     * @param[in]   obsd_t     obs             observation in rtklib
      *
      * @return      int      frequency
      */
-    int FindFrqIndex(int sys, char (*type)[5], obsd_t obs)
+    int FindFrqIndex(int sys, char (*type)[5], char channel[5], obsd_t obs)
     {
         int index = -1;
         char s[10] = "";
@@ -584,47 +586,47 @@ namespace gnss_common
                 if (obs.code[f] == CODE_NONE)
                     continue;
                 else if (obs.code[f] == CODE_L1C)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1C");
                 else if (obs.code[f] == CODE_L1P)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1P");
                 else if (obs.code[f] == CODE_L1W)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1W");
                 else if (obs.code[f] == CODE_L1Y)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1Y");
                 else if (obs.code[f] == CODE_L1M)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1M");
                 else if (obs.code[f] == CODE_L1N)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1N");
                 else if (obs.code[f] == CODE_L1S)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1S");
                 else if (obs.code[f] == CODE_L1L)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1L");
                 else if (obs.code[f] == CODE_L2C)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2C");
                 else if (obs.code[f] == CODE_L2D)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2D");
                 else if (obs.code[f] == CODE_L2S)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2S");
                 else if (obs.code[f] == CODE_L2L)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2L");
                 else if (obs.code[f] == CODE_L2X)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2X");
                 else if (obs.code[f] == CODE_L2P)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2P");
                 else if (obs.code[f] == CODE_L2W)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2W");
                 else if (obs.code[f] == CODE_L2Y)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2Y");
                 else if (obs.code[f] == CODE_L2M)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2M");
                 else if (obs.code[f] == CODE_L2N)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2N");
                 else if (obs.code[f] == CODE_L5I)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5I");
                 else if (obs.code[f] == CODE_L5Q)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5Q");
                 else if (obs.code[f] == CODE_L5X)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5X");
                 if (!strcmp(*type, s))
                 {
                     index = f;
@@ -639,13 +641,13 @@ namespace gnss_common
                 if (obs.code[f] == CODE_NONE)
                     continue;
                 else if (obs.code[f] == CODE_L1C)
-                    strcpy(s, "G1");
+                    strcpy(s, "G1"), strcpy(channel, "1C");
                 else if (obs.code[f] == CODE_L1P)
-                    strcpy(s, "G1");
+                    strcpy(s, "G1"), strcpy(channel, "1P");
                 else if (obs.code[f] == CODE_L2C)
-                    strcpy(s, "G2");
+                    strcpy(s, "G2"), strcpy(channel, "2C");
                 else if (obs.code[f] == CODE_L2P)
-                    strcpy(s, "G2");
+                    strcpy(s, "G2"), strcpy(channel, "2P");
                 if (!strcmp(*type, s))
                 {
                     index = f;
@@ -660,37 +662,37 @@ namespace gnss_common
                 if (obs.code[f] == CODE_NONE)
                     continue;
                 else if (obs.code[f] == CODE_L2I)
-                    strcpy(s, "B1I");
+                    strcpy(s, "B1I"), strcpy(channel, "2I");
                 else if (obs.code[f] == CODE_L2Q)
-                    strcpy(s, "B1I");
+                    strcpy(s, "B1I"), strcpy(channel, "2Q");
                 else if (obs.code[f] == CODE_L2X)
-                    strcpy(s, "B1I");
+                    strcpy(s, "B1I"), strcpy(channel, "2X");
                 else if (obs.code[f] == CODE_L7I)
-                    strcpy(s, "B2I");
+                    strcpy(s, "B2I"), strcpy(channel, "7I");
                 else if (obs.code[f] == CODE_L7Q)
-                    strcpy(s, "B2I");
+                    strcpy(s, "B2I"), strcpy(channel, "7Q");
                 else if (obs.code[f] == CODE_L7X)
-                    strcpy(s, "B2I");
+                    strcpy(s, "B2I"), strcpy(channel, "7X");
                 else if (obs.code[f] == CODE_L6I)
-                    strcpy(s, "B3I");
+                    strcpy(s, "B3I"), strcpy(channel, "6I");
                 else if (obs.code[f] == CODE_L6Q)
-                    strcpy(s, "B3I");
+                    strcpy(s, "B3I"), strcpy(channel, "6Q");
                 else if (obs.code[f] == CODE_L6X)
-                    strcpy(s, "B3I");
+                    strcpy(s, "B3I"), strcpy(channel, "6X");
                 else if (obs.code[f] == CODE_L5D)
-                    strcpy(s, "B2a");
+                    strcpy(s, "B2a"), strcpy(channel, "5D");
                 else if (obs.code[f] == CODE_L5P)
-                    strcpy(s, "B2a");
+                    strcpy(s, "B2a"), strcpy(channel, "5P");
                 else if (obs.code[f] == CODE_L5X)
-                    strcpy(s, "B2a");
+                    strcpy(s, "B2a"), strcpy(channel, "5X");
                 else if (obs.code[f] == CODE_L7D)
-                    strcpy(s, "B2b");
+                    strcpy(s, "B2b"), strcpy(channel, "7D");
                 else if (obs.code[f] == CODE_L1D)
-                    strcpy(s, "B1C");
+                    strcpy(s, "B1C"), strcpy(channel, "1D");
                 else if (obs.code[f] == CODE_L1P)
-                    strcpy(s, "B1C");
+                    strcpy(s, "B1C"), strcpy(channel, "1P");
                 else if (obs.code[f] == CODE_L1X)
-                    strcpy(s, "B1C");
+                    strcpy(s, "B1C"), strcpy(channel, "1X");
                 if (!strcmp(*type, s))
                 {
                     index = f;
@@ -705,43 +707,43 @@ namespace gnss_common
                 if (obs.code[f] == CODE_NONE)
                     continue;
                 else if (obs.code[f] == CODE_L1C)
-                    strcpy(s, "E1");
+                    strcpy(s, "E1"), strcpy(channel, "1C");
                 else if (obs.code[f] == CODE_L1A)
-                    strcpy(s, "E1");
+                    strcpy(s, "E1"), strcpy(channel, "1A");
                 else if (obs.code[f] == CODE_L1B)
-                    strcpy(s, "E1");
+                    strcpy(s, "E1"), strcpy(channel, "1B");
                 else if (obs.code[f] == CODE_L1X)
-                    strcpy(s, "E1");
+                    strcpy(s, "E1"), strcpy(channel, "1X");
                 else if (obs.code[f] == CODE_L1Z)
-                    strcpy(s, "E1");
+                    strcpy(s, "E1"), strcpy(channel, "1Z");
                 else if (obs.code[f] == CODE_L6A)
-                    strcpy(s, "E6");
+                    strcpy(s, "E6"), strcpy(channel, "6A");
                 else if (obs.code[f] == CODE_L6B)
-                    strcpy(s, "E6");
+                    strcpy(s, "E6"), strcpy(channel, "6B");
                 else if (obs.code[f] == CODE_L6C)
-                    strcpy(s, "E6");
+                    strcpy(s, "E6"), strcpy(channel, "6C");
                 else if (obs.code[f] == CODE_L6X)
-                    strcpy(s, "E6");
+                    strcpy(s, "E6"), strcpy(channel, "6X");
                 else if (obs.code[f] == CODE_L6Z)
-                    strcpy(s, "E6");
+                    strcpy(s, "E6"), strcpy(channel, "6Z");
                 else if (obs.code[f] == CODE_L7I)
-                    strcpy(s, "E5b");
+                    strcpy(s, "E5b"), strcpy(channel, "7I");
                 else if (obs.code[f] == CODE_L7Q)
-                    strcpy(s, "E5b");
+                    strcpy(s, "E5b"), strcpy(channel, "7Q");
                 else if (obs.code[f] == CODE_L7X)
-                    strcpy(s, "E5b");
+                    strcpy(s, "E5b"), strcpy(channel, "7X");
                 else if (obs.code[f] == CODE_L8I)
-                    strcpy(s, "E5a_b");
+                    strcpy(s, "E5a_b"), strcpy(channel, "8I");
                 else if (obs.code[f] == CODE_L8Q)
-                    strcpy(s, "E5a_b");
+                    strcpy(s, "E5a_b"), strcpy(channel, "8Q");
                 else if (obs.code[f] == CODE_L8X)
-                    strcpy(s, "E5a_b");
+                    strcpy(s, "E5a_b"), strcpy(channel, "8X");
                 else if (obs.code[f] == CODE_L5I)
-                    strcpy(s, "E5a");
+                    strcpy(s, "E5a"), strcpy(channel, "5I");
                 else if (obs.code[f] == CODE_L5Q)
-                    strcpy(s, "E5a");
+                    strcpy(s, "E5a"), strcpy(channel, "5Q");
                 else if (obs.code[f] == CODE_L5X)
-                    strcpy(s, "E5a");
+                    strcpy(s, "E5a"), strcpy(channel, "5X");
                 if (!strcmp(*type, s))
                 {
                     index = f;
@@ -756,31 +758,31 @@ namespace gnss_common
                 if (obs.code[f] == CODE_NONE)
                     continue;
                 else if (obs.code[f] == CODE_L1C)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1C");
                 else if (obs.code[f] == CODE_L1S)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1S");
                 else if (obs.code[f] == CODE_L1L)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1L");
                 else if (obs.code[f] == CODE_L1X)
-                    strcpy(s, "L1");
+                    strcpy(s, "L1"), strcpy(channel, "1X");
                 else if (obs.code[f] == CODE_L6S)
-                    strcpy(s, "LEX");
+                    strcpy(s, "LEX"), strcpy(channel, "6S");
                 else if (obs.code[f] == CODE_L6L)
-                    strcpy(s, "LEX");
+                    strcpy(s, "LEX"), strcpy(channel, "6L");
                 else if (obs.code[f] == CODE_L6X)
-                    strcpy(s, "LEX");
+                    strcpy(s, "LEX"), strcpy(channel, "6X");
                 else if (obs.code[f] == CODE_L2S)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2S");
                 else if (obs.code[f] == CODE_L2L)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2L");
                 else if (obs.code[f] == CODE_L2X)
-                    strcpy(s, "L2");
+                    strcpy(s, "L2"), strcpy(channel, "2X");
                 else if (obs.code[f] == CODE_L5I)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5I");
                 else if (obs.code[f] == CODE_L5Q)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5Q");
                 else if (obs.code[f] == CODE_L5X)
-                    strcpy(s, "L5");
+                    strcpy(s, "L5"), strcpy(channel, "5X");
                 if (!strcmp(*type, s))
                 {
                     index = f;

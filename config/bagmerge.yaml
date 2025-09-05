@@ -1,0 +1,35 @@
+%YAML 1.2
+---
+
+# Data filepath
+Output_Filepath: "/home/leiwh/Research/Data/GICI-LIB/1.1"   # The filepath to output converted rosbag
+ROSBag_FilePath: "/home/leiwh/Research/Data/GICI-LIB/1.1"   # The filepath to extract raw rosbag
+ROSBag_FileName: 
+  - image.bag
+  - imu.bag
+  - gnss_rover.bag
+  - gnss_reference.bag
+  - gnss_ephemeris.bag
+GNSSBaseObs_FilePath: ""  # The filepath to read ground truth
+GNSSBaseEph_FilePath: ""  # The filepath to output result
+GNSSolution_FilePath: ""  # The filepath to output log information
+
+# ROS topic before convertion
+Imu_Topic_Input: ""                               # Imu data topic
+Image_Topic_Input: ""                             # Image data topic
+GNSSRaw_Topic_Input: ""                           # The GNSS solution data topic
+GNSSSol_Topic_Input: ""                           # The GNSS solution data topic
+
+# ROS topic after convertion
+Imu_Topic_Output: ""                             # Imu data topic
+Image_Topic_Output: ""                           # Image data topic
+GNSSRoveObs_Topic_Output: ""                     # The GNSS observation data topic [rove station, base station]
+GNSSBaseObs_Topic_Output: ""                     # The GNSS observation data topic [rove station, base station]
+GNSSRoveEph_Topic_Output: ""                     # The GNSS ephemeris data topic [rove station, base station]
+GNSSBaseEph_Topic_Output: ""                     # The GNSS ephemeris data topic [rove station, base station]
+GNSSSol_Topic_Output: ""                         # The GNSS solution data topic
+
+# Data format
+# 0: ROS | 1: VisionRTK_01 | 2: VisionRTK_02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS
+DataFormat_Input: 0                              # Data format before conversion
+DataFormat_Output: 0                             # Data format after conversion

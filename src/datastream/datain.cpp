@@ -116,11 +116,6 @@ namespace dataio_common
             ROS_ERROR("Fail to load filepath to output.");
             return false;
         }
-        if (config.format_input < 0 || config.format_output < 0 || config.format_input == config.format_output)
-        {
-            ROS_ERROR("Data format is wrong.");
-            return false;
-        }
 
         return true;
     }
@@ -174,6 +169,74 @@ namespace dataio_common
 
         // close the file
         bag_in.close();
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract imu data from txt file
+     * @note        1. The imu data format: GPSWeek GPSSecond Gyros-XYZ[rad/s] Accel-XYZ[m/s2]
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
+     *
+     * @param[in]   char*      bagfile       filepath
+     * @param[out]  list       imudatas      all imu data
+     * @param[in]   int        infolines     need to skip
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+     */
+    extern bool Extract_IMUdata_TXTFile(const char *infilepath, std::list<sensor_msgs::Imu> &imudatas, int infolines)
+    {
+
+        // 1. Open the txt file
+        FILE *infile = nullptr;
+        try
+        {
+            infile = fopen(infilepath, "rt");
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Fail to open txt file: " << e.what() << std::endl;
+        }
+
+        // 2. Skip info lines
+        char buffer[1024] = {'\0'};
+        for (int i = 0; i < infolines; i++)
+            fgets(buffer, sizeof(buffer), infile);
+
+        // 3. Extract GNSS solution data
+        while (!feof(infile))
+        {
+            // clear old data and read new data
+            memset(buffer, '\0', sizeof(buffer));
+            fgets(buffer, sizeof(buffer), infile);
+
+            // check the length of data
+            int charnum = strlen(buffer);
+            if (charnum <= 0)
+                continue;
+
+            // get one imu data
+            int GPSWeek = -1;
+            double GPSSecond = -1.0, gyros[3] = {0.0}, accel[3] = {0.0};
+            sscanf(buffer, "%d %lf %lf %lf %lf %lf %lf %lf\n", &GPSWeek, &GPSSecond, gyros, gyros + 1, gyros + 2, accel, accel + 1, accel + 2);
+
+            if (GPSWeek <= 0 || GPSSecond < 0.0)
+                continue;
+
+            // store the imu data
+            sensor_msgs::Imu onedata;
+            onedata.header.stamp = ros::Time(GPSWeek * 604800.0 + GPSSecond);
+            onedata.angular_velocity.x = gyros[0];
+            onedata.angular_velocity.y = gyros[1];
+            onedata.angular_velocity.z = gyros[2];
+            onedata.linear_acceleration.x = accel[0];
+            onedata.linear_acceleration.y = accel[1];
+            onedata.linear_acceleration.z = accel[2];
+            imudatas.push_back(onedata);
+        }
+
+        fclose(infile);
 
         return true;
     }
@@ -953,9 +1016,9 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract GNSS ephemeris data from the rinex 3.0x file
-     * @note        1. The GNSS raw data to read should be rinex3.0x format
-     *              2. The GNSS raw data is saved as IPS struct format
+     * @brief       Extract GNSS ephemeris data from rinex 3.0x file
+     * @note        1. GNSS ephdata will be saved as IPS struct format
+     *              2. Convert BDS time to GPS time
      *
      * @param[in]   char*     rinex_infilepath      rinex format file
      * @param[out]  list      gnss_ephdata          store all ephemeris data in all epochs
@@ -1070,11 +1133,6 @@ namespace dataio_common
         gnss_common::IPS_GPSEPH BDSEph;
         gnss_common::IPS_GPSEPH GALEph;
         gnss_common::IPS_GPSEPH QZSEph;
-        std::vector<std::vector<gnss_common::IPS_GPSEPH>> m_GPSEphDatas;
-        std::vector<std::vector<gnss_common::IPS_GPSEPH>> m_BD2EphDatas;
-        std::vector<std::vector<gnss_common::IPS_GPSEPH>> m_BD3EphDatas;
-        std::vector<std::vector<gnss_common::IPS_GPSEPH>> m_GALEphDatas;
-        std::vector<std::vector<gnss_common::IPS_GPSEPH>> m_QZSEphDatas;
 
         while (fgets(buff, IPS_MAXSIZE, infile))
         {
@@ -1153,7 +1211,6 @@ namespace dataio_common
                 GPSEph.toe = adjweek(gnss_common::IPS_GPSTIME(GPSEph.week, GPSEph.toes), GPSEph.toc);
                 GPSEph.ttr = adjweek(gnss_common::IPS_GPSTIME(GPSEph.week, ttr), GPSEph.toc);
 
-                // m_GPSEphDatas[sat - 1].push_back(GPSEph);
                 gnss_ephdata.push_back(GPSEph);
             }
             // BDS
@@ -1161,7 +1218,7 @@ namespace dataio_common
             {
                 BDSEph.prn = prn;
                 BDSEph.toc = gnss_common::str2time(buff, 4, 19);
-                BDSEph.toc = gnss_common::bdst2gpst(BDSEph.toc); // convert to GPStime
+                BDSEph.toc = gnss_common::bdst2gpst(BDSEph.toc); // convert to GPS second
 
                 BDSEph.f0 = str2num(buff, 23, 19);
                 BDSEph.f1 = str2num(buff, 42, 19);
@@ -1223,7 +1280,9 @@ namespace dataio_common
                 BDSEph.toe = bdst2gpst(BDSEph.toe);
                 BDSEph.ttr = bdst2gpst(BDSEph.ttr);
 
-                // m_BD2EphDatas[sat - 1].push_back(BDSEph);
+                // NOTE: convert BDS toes to GPS toes
+                BDSEph.toes += 14.0;
+
                 gnss_ephdata.push_back(BDSEph);
             }
             // BDS3
@@ -1292,7 +1351,9 @@ namespace dataio_common
                 BDSEph.toe = bdst2gpst(BDSEph.toe);
                 BDSEph.ttr = bdst2gpst(BDSEph.ttr);
 
-                // m_BD3EphDatas[sat - 1].push_back(BDSEph);
+                // NOTE: convert BDS toes to GPS toes
+                BDSEph.toes += 14.0;
+
                 gnss_ephdata.push_back(BDSEph);
             }
             // GAL
@@ -1366,7 +1427,6 @@ namespace dataio_common
                 GALEph.toe = adjweek(gnss_common::IPS_GPSTIME(GALEph.week, GALEph.toes), GALEph.toc);
                 GALEph.ttr = adjweek(gnss_common::IPS_GPSTIME(GALEph.week, ttr), GALEph.toc);
 
-                // m_GALEphDatas[sat - 1].push_back(GALEph);
                 gnss_ephdata.push_back(GALEph);
             }
             // QZSS
@@ -1431,12 +1491,18 @@ namespace dataio_common
                 QZSEph.toe = adjweek(gnss_common::IPS_GPSTIME(QZSEph.week, QZSEph.toes), QZSEph.toc);
                 QZSEph.ttr = adjweek(gnss_common::IPS_GPSTIME(QZSEph.week, ttr), QZSEph.toc);
 
-                // m_QZSEphDatas[sat - 1].push_back(QZSEph);
                 gnss_ephdata.push_back(QZSEph);
             }
         }
 
+        // Rember to close the file
         fclose(infile);
+
+        // 4. Preprocess
+        // 4.1 sort the ephemeirs data according to the toe (not toes)
+        // NOTE: The toe has been converted to GPS time for BDS
+        gnss_ephdata.sort([](const gnss_common::IPS_GPSEPH &a, const gnss_common::IPS_GPSEPH &b)
+                          { return a.toe.GPSWeek * 604800.0 + a.toe.secsOfWeek + a.toe.fracOfSec < b.toe.GPSWeek * 604800.0 + b.toe.secsOfWeek + b.toe.fracOfSec; });
 
         return true;
     }
@@ -1604,7 +1670,7 @@ namespace dataio_common
     extern bool Extract_GNSSSolution_TXTFile(const char *infilepath, std::list<Solution_GNSS> &soldatas, dataformat datatype, const dataio_common::timesystem timesys, const int infolines)
     {
 
-        // 1. Open the bag file
+        // 1. Open the txt file
         FILE *infile = nullptr;
         try
         {
@@ -1612,7 +1678,7 @@ namespace dataio_common
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Fail to open bag file: " << e.what() << std::endl;
+            std::cerr << "Fail to open txt file: " << e.what() << std::endl;
         }
 
         // 2. Skip info lines
@@ -1654,8 +1720,7 @@ namespace dataio_common
      *
      * @return      bool      true       extract successfully
      *                        false      fail to extract
-
-    */
+     */
     extern bool Extract_GNSSSolution_IPSPOS_TXTFile(char *buffer, std::list<dataio_common::Solution_GNSS> &soldatas)
     {
         // 1. get solution data from buffer
@@ -1690,6 +1755,107 @@ namespace dataio_common
 
         // store the message
         soldatas.push_back(onedata);
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract INS Solution data from GICLIB format file
+     * @note        1. The time system will be convert to GPS time
+     *
+     * @param[in]   char*             buffer        buffer to read data
+     * @param[out]  Solution_INS      sol_data      INS solution
+     * @param[in]   timesystem        timesys       time system before conversion
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+     */
+    extern bool Extract_INSSolution_TXTFile_GICILIB(const char *buffer, Solution_INS &sol_data, const timesystem timesys)
+    {
+        ///< 1. Get solution data from buffer
+        sscanf(buffer, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", &sol_data.timestamp,
+               sol_data.position_LLH, sol_data.position_LLH + 1, sol_data.position_LLH + 2,
+               sol_data.velocity_ENU, sol_data.velocity_ENU + 1, sol_data.velocity_ENU + 2,
+               sol_data.rotation_Qbn, sol_data.rotation_Qbn + 1, sol_data.rotation_Qbn + 2, sol_data.rotation_Qbn + 3);
+
+        ///< 2. Convert solution data
+        // (1) Linux time to GPS time
+        sol_data.timestamp = sol_data.timestamp - GPS_LINUX_TIME + LEAP_SECOND;
+        sol_data.gps_week = (int)(sol_data.timestamp / 604800.0);
+        sol_data.gps_second = sol_data.timestamp - sol_data.gps_week * 604800.0;
+        // (2) LLH to XYZ
+        sol_data.position_LLH[0] *= IPS_D2R;
+        sol_data.position_LLH[1] *= IPS_D2R;
+        gnss_common::LLH2XYZ(sol_data.position_LLH, sol_data.position_XYZ);
+        // (3) VENU to VXYZ
+        Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(sol_data.position_LLH[0], sol_data.position_LLH[1]);
+        Eigen::Vector3d VENU(sol_data.velocity_ENU);
+        Eigen::Vector3d VXYZ = (R_eTon.transpose()) * VENU;
+        sol_data.velocity_XYZ[0] = VXYZ[0];
+        sol_data.velocity_XYZ[1] = VXYZ[1];
+        sol_data.velocity_XYZ[2] = VXYZ[2];
+        // (4) Qbn to Azimuth
+        double Rbn[9] = {0.0};
+        Eigen::Matrix<double, 4, 1> q_bn(sol_data.rotation_Qbn);
+        Eigen::MatrixXd Rbn_mat = quat_2_Rot(q_bn);
+        EigenMatrix2Array(Rbn_mat, Rbn);
+        Rbl2Attitude(Rbn, sol_data.attitude);
+        Attitude2Azimuth(sol_data.attitude, sol_data.azimuth);
+
+        return true;
+    }
+
+    /**
+     * @brief       The main function to extract INS Solution data from text file
+     * @note        1. The time system will be convert to GPS time
+     *
+     * @param[in]   char*           infilepath    file path
+     * @param[out]  list            sol_datas     INS solution
+     * @param[out]  dataformat      format        dataformat
+     * @param[in]   timesystem      timesys       time system
+     * @param[in]   int             infolines     need to skip
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+     */
+    extern bool Extract_INSSolution_TXTFile_MAIN(const char *infilepath, std::list<Solution_INS> &sol_datas, const dataformat format, const timesystem timesys, const int infolines)
+    {
+        ///< 1. Open the text file
+        FILE *infile = fopen(infilepath, "rt");
+        if (infile == NULL)
+        {
+            ROS_ERROR("Fail to open the input file: %s", infilepath);
+            return false;
+        }
+
+        ///< 2. Skip the info lines
+        char buffer[1024] = {'\0'};
+        for (int i = 0; i < infolines; i++)
+            fgets(buffer, sizeof(buffer), infile);
+
+        // 3. Extract INS solution
+        while (!feof(infile))
+        {
+            // clear old data
+            memset(buffer, '\0', sizeof(buffer));
+            fgets(buffer, sizeof(buffer), infile);
+
+            // check the length
+            if (strlen(buffer) <= 0)
+                continue;
+
+            // extract and store
+            Solution_INS onedata;
+            switch (format)
+            {
+            case dataformat::GICILIB_Format:
+                Extract_INSSolution_TXTFile_GICILIB(buffer, onedata, timesys);
+                sol_datas.push_back(onedata);
+                break;
+            }
+        }
+
+        fclose(infile);
 
         return true;
     }

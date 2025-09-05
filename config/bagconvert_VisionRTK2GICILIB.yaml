@@ -1,0 +1,31 @@
+%YAML 1.2
+---
+
+# Data filepath
+Output_Filepath: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log"   # The filepath to output converted rosbag
+ROSBag_FilePath: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log"   # The filepath to extract raw rosbag
+ROSBag_FileName: 
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_0.bag
+GNSSBaseObs_FilePath: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log/IGS000USA_R_20232680000_01D_01S_MO.rnx"  # The filepath to read ground truth
+GNSSBaseEph_FilePath: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log/IGS000USA_R_20232680000_01D_01S_MN.rnx"  # The filepath to output result
+GNSSolution_FilePath: ""                      # The filepath to output log information
+
+# ROS topic before convertion
+Imu_Topic_Input: "/imu/data"                                   # Imu data topic
+Image_Topic_Input: "/camera/lowres/image"                      # Image data topic
+GNSSRaw_Topic_Input: "/gnss1/raw"                              # The GNSS solution data topic
+GNSSSol_Topic_Input: "/gnss1/status"                           # The GNSS solution data topic
+
+# ROS topic after convertion
+Imu_Topic_Output: "/gici/imu_raw"                              # Imu data topic
+Image_Topic_Output: "/gici/image_raw"                          # Image data topic
+GNSSRoveObs_Topic_Output: "/gici/gnss_rover/observations"      # The GNSS observation data topic [rove station, base station]
+GNSSBaseObs_Topic_Output: "/gici/gnss_reference/observations"  # The GNSS observation data topic [rove station, base station]
+GNSSRoveEph_Topic_Output: "/gici/gnss_ephemeris/ephemerides"   # The GNSS ephemeris data topic [rove station, base station]
+GNSSBaseEph_Topic_Output: /gici/gnss_reference/ephemerides
+GNSSSol_Topic_Output: ""                                       # The GNSS solution data topic
+
+# Data format
+# 0: ROS | 1: VisionRTK_01 | 2: VisionRTK_02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB_Format
+DataFormat_Input: 1                                            # Data format before conversion
+DataFormat_Output: 7                                           # Data format after conversion

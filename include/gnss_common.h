@@ -393,7 +393,7 @@ namespace gnss_common
     /**
      * @brief       Find the frequency and channel
      */
-    int FindFrqIndex(int sys, char (*type)[5], obsd_t obs);
+    int FindFrqIndex(int sys, char (*type)[5], char channel[5], obsd_t obs);
 
     /**
      * @brief       Sort the GNSS observations data by GNSS PRN

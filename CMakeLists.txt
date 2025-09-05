@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(datastreamio)
 
-set(CMAKE_BUILD_TYPE "Release")
-# set(CMAKE_BUILD_TYPE "Debug")
+# set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -58,26 +60,26 @@ find_package(Eigen3 REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-file(GLOB_RECURSE message_files ${PROJECT_SOURCE_DIR}/msg/*.msg)
-add_message_files(
-  FILES 
-  VisionRTK_GNSSRaw_01.msg
-  VisionRTK_GNSSRaw_02.msg
-  VisionRTK_GNSSStatus_01.msg
-  VisionRTK_GNSSStatus_02.msg
-  RobotGVINS_GNSSSol.msg
-  RobotGVINS_GNSSSat.msg
-  RobotGVINS_GNSSObs.msg
-  RobotGVINS_GNSSEph.msg
-  RobotGVINS_GTINSSol.msg
-  GVINS_GNSSMeasMsg.msg
-  GVINS_GNSSObsMsg.msg
-  GVINS_GNSSPVTSolnMsg.msg
-  GVINS_GNSSTimeMsg.msg
-  KAIST_VRSGPS.msg
-  KAIST_XsensIMU.msg
-)
-
+# add all directories
+set(MSG_DIRS VisionRTK_msg RobotGVINS_msg GVINS_msg KAIST_msg GICILIB_msg)
+# process for each directory
+foreach(dir ${MSG_DIRS})
+  # get all message file
+  file(GLOB msg_paths "msg/${dir}/*.msg")
+  # get all message filename
+  set(filenames "")
+  foreach(path ${msg_paths})
+    get_filename_component(filename ${path} NAME)
+    list(APPEND filenames ${filename})
+  endforeach()
+  # add message files
+  add_message_files(
+    DIRECTORY "msg/${dir}"
+    FILES ${filenames}
+  )
+  # [OPTIONAL] print message files
+  message(STATUS "DIRECTORY ${dir} MESSAGE: ${filenames}")
+endforeach()
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -243,12 +245,27 @@ add_library(${PROJECT_NAME}_lib SHARED ${DIR_ALL})
 target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 ## generate the executable program and link with the library
+# test function
+add_executable(test_function src/main.cpp)
+target_link_libraries(test_function ${PROJECT_NAME}_lib)
+add_dependencies(test_function ${PROJECT_NAME}_generate_messages_cpp)
+
+# merge multiple rosbag files
+add_executable(bagmerge src/bagmerge.cpp)
+target_link_libraries(bagmerge ${PROJECT_NAME}_lib)
+add_dependencies(bagmerge ${PROJECT_NAME}_generate_messages_cpp)
+
 # process Real-Time data stream from Vision-RTK2
 add_executable(rtiemode_VisionRTK src/RTIENode_VisionRTK.cpp)
 target_link_libraries(rtiemode_VisionRTK ${PROJECT_NAME}_lib)
 add_dependencies(rtiemode_VisionRTK ${PROJECT_NAME}_generate_messages_cpp)
 
-# process Vision-RTK data
-add_executable(bagconvert_VisionRTK src/Extract_and_Write_VisionRTK.cpp)
-target_link_libraries(bagconvert_VisionRTK ${PROJECT_NAME}_lib)
-add_dependencies(bagconvert_VisionRTK ${PROJECT_NAME}_generate_messages_cpp)
+# convert rosbag file from VisionRTK to RobotGVINS
+add_executable(bagconvert_VisionRTK2RobotGVINS src/bagconvert_VisionRTK2RobotGVINS.cpp)
+target_link_libraries(bagconvert_VisionRTK2RobotGVINS ${PROJECT_NAME}_lib)
+add_dependencies(bagconvert_VisionRTK2RobotGVINS ${PROJECT_NAME}_generate_messages_cpp)
+
+# convert rosbag file from VisionRTK to GICILIB
+add_executable(bagconvert_VisionRTK2GICILIB src/bagconvert_VisionRTK2GICILIB.cpp)
+target_link_libraries(bagconvert_VisionRTK2GICILIB ${PROJECT_NAME}_lib)
+add_dependencies(bagconvert_VisionRTK2GICILIB ${PROJECT_NAME}_generate_messages_cpp)

@@ -17,6 +17,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <cerrno>
+#include <type_traits>
+#include <algorithm>
 #include <vector>
 #include <list>
 #include <map>
@@ -53,6 +55,12 @@
 #include <GVINS_GNSSTimeMsg.h>
 #include <KAIST_VRSGPS.h>
 #include <KAIST_XsensIMU.h>
+#include <GICILIB_GnssObservation.h>
+#include <GICILIB_GnssObservations.h>
+#include <GICILIB_GnssEphemeris.h>
+#include <GICILIB_GlonassEphemeris.h>
+#include <GICILIB_GnssEphemerides.h>
+#include <GICILIB_GnssAntennaPosition.h>
 #include "rtklib.h"
 
 /**********************************************************************************************************************************
@@ -87,7 +95,8 @@ namespace dataio_common
         KAIST_Format,
         RobotGVINS_Format,
         TUM_Format,
-        IPS_Format
+        IPS_Format,
+        GICILIB_Format
     };
 
     ///< time system
@@ -168,7 +177,7 @@ namespace dataio_common
     };
 
     /**
-     *@brief   GNSS data struct
+     * @brief   GNSS solution struct
      */
     struct Solution_GNSS
     {
@@ -194,6 +203,31 @@ namespace dataio_common
         Solution_GNSS()
         {
             ZeroStruct(*this, Solution_GNSS);
+        }
+    };
+
+    /**
+     * @brief   INS solution struct
+     */
+    struct Solution_INS
+    {
+        double timestamp;       // GPS time (s)
+        int gps_week;           // GPS week
+        double gps_second;      // GPS second (s)
+        double position_XYZ[3]; // ECEF(m)
+        double position_LLH[3]; // BLH(rad/rad/m)
+        double velocity_XYZ[3]; // ECEF(m/s)
+        double velocity_ENU[3]; // ENU(m/s)
+        double rotation_Rbe[9]; // rotation matrix from b to e
+        double rotation_Rbn[9]; // rotation matrix from b to n
+        double rotation_Qbe[4]; // quaternion from b to e (xyzw)
+        double rotation_Qbn[9]; // rotation matrix from b to n (xyzw)
+        double azimuth[3];      // heading, pitch, roll (deg)
+        double attitude[3];     // yaw, pitch, roll (deg)
+
+        Solution_INS()
+        {
+            ZeroStruct(*this, Solution_INS);
         }
     };
 }

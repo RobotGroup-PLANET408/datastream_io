@@ -11,6 +11,65 @@
 
 namespace dataio_common
 {
+
+    /**
+     * @brief       Get the start and end timestamp of ROS bag
+     * @note        1. The rosbag file should have imu message to get the timestamp
+     *
+     * @param[in]   char*        bagfile        rosbag file
+     * @param[in]   string       imu_topic      rosbag file
+     * @param[in]   rosTime      start_time     start timestamp of imu message
+     * @param[in]   rosTime      end_time       end timestamp of imu message
+     */
+    extern bool Get_StartEndTime_ROSBag(const char *bagfile, const std::string &imu_topic, ros::Time &start_time, ros::Time &end_time)
+    {
+        // 1. open the output bag file
+        rosbag::Bag infile_bag;
+        infile_bag.open(bagfile, rosbag::bagmode::Read);
+        if (!infile_bag.isOpen())
+        {
+            ROS_ERROR("Fail to open the rosbag file: %s to get start and end timestamp.", bagfile);
+            return false;
+        }
+
+        // 2. prepare variables
+        bool first_imu = true;
+        start_time = end_time = ros::Time(0.0);
+        std::vector<std::string> topics;
+        topics.push_back(std::string(imu_topic));
+        rosbag::View view(infile_bag, rosbag::TopicQuery(topics));
+
+        // 3. traverse imu message
+        foreach (rosbag::MessageInstance const m, view)
+        {
+            if (m.instantiate<sensor_msgs::Imu>() != nullptr)
+            {
+                sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
+                double timestamp = imu_msg->header.stamp.sec + imu_msg->header.stamp.nsec * 1e-9;
+
+                if (first_imu)
+                {
+                    start_time = ros::Time(timestamp);
+                    first_imu = false;
+                }
+
+                end_time = ros::Time(timestamp);
+            }
+        }
+
+        // Remember to close the file
+        infile_bag.close();
+
+        // NOTE: Check the start time and end time
+        if (start_time <= ros::Time(0.0) || end_time <= ros::Time(0.0) || end_time <= start_time)
+        {
+            ROS_FATAL("Invalid start time or end time.");
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * @brief       Write imu data to bag file
      * @note
@@ -100,6 +159,7 @@ namespace dataio_common
         return true;
     }
 
+    // FIXME: need to delete
     /**
      * @brief       Write GNSS observations data to ros bag file as RobotGVINS format
      * @note        1. The gnss observation data to write should be ros RobotGVINS format defaultly
@@ -250,6 +310,7 @@ namespace dataio_common
         return true;
     }
 
+    // FIXME: need to delete
     /**
      * @brief       Write gnss ephemeris data to ros bag file as RobotGVINS format
      * @note        1. The gnss ephemeris data to write should be ros RobotGVINS format defaultly
@@ -356,6 +417,205 @@ namespace dataio_common
     }
 
     /**
+     * @brief       Write ros message to ros bag file
+     * @note        The time range of the ros messages can be determined by the start and end time of rosbag file
+     *
+     * @param[in]   char*       bag_file         bag filepath
+     * @param[in]   string      msg_topic        message topic
+     * @param[in]   string      imu_topic        imu topic
+     * @param[in]   list        msg_data         message data
+     * @param[in]   int         bag_mode         1: write | 2: app | others: abnormal
+     * @param[in]   bool        use_bagtime      true: the written messages should be within the time range | false: unnecessary
+     *
+     * @return      bool       true       write successfully
+     *                         false      fail to write
+     */
+    template <typename T>
+    bool Write_ROSMessage_ROSBag(const char *bag_file, const std::string msg_topic, const std::string imu_topic, const T &msg_data, int bag_mode, bool use_bagtime)
+    {
+        ///< 1. Get the start and end time of rosbag
+        ros::Time start_time(0.0), end_time(0.0);
+        bool valid_time = true;
+        if (use_bagtime == true)
+            valid_time = Get_StartEndTime_ROSBag(bag_file, imu_topic, start_time, end_time);
+
+        if (valid_time == false)
+        {
+            ROS_FATAL("[Write_ROSMessage_ROSBag] Fail to get the start and end time of rosbag: %s.", bag_file);
+        }
+
+        ///< 2. Write ros messages to rosbag
+        // 2.1 open the rosbag file
+        rosbag::Bag outfile_bag;
+        if (bag_mode == 1)
+            outfile_bag.open(bag_file, rosbag::bagmode::Write);
+        else if (bag_mode == 2)
+            outfile_bag.open(bag_file, rosbag::bagmode::Append);
+        else
+        {
+            ROS_FATAL("[Write_ROSMessage_ROSBag] Abnromous bag mode.");
+            return false;
+        }
+
+        if (!outfile_bag.isOpen())
+        {
+            ROS_FATAL("[Write_ROSMessage_ROSBag] Fail to open the rosbag file: %s to write ros messages.", bag_file);
+            return false;
+        }
+
+        // 2.2 write each message
+        for (auto iter = msg_data.begin(); iter != msg_data.end(); ++iter)
+        {
+            auto one_msg = *iter;
+
+            // the ros messages should be within the time range
+            if (use_bagtime == true && valid_time == true)
+            {
+                if (one_msg.header.stamp > start_time && one_msg.header.stamp < end_time)
+                    outfile_bag.write(msg_topic, one_msg.header.stamp, one_msg);
+            }
+            // the ros messages does not need to be within the time range
+            else
+            {
+                outfile_bag.write(msg_topic, one_msg.header.stamp, one_msg);
+            }
+        }
+
+        // Remember to close the bag file
+        outfile_bag.close();
+
+        return true;
+    }
+
+    template bool Write_ROSMessage_ROSBag<std::list<datastreamio::RobotGVINS_GNSSObs>>(const char *bag_file, const std::string gnss_topic, const std::string imu_topic, const std::list<datastreamio::RobotGVINS_GNSSObs> &gnss_data, int bag_mode, bool use_bagtime);
+    template bool Write_ROSMessage_ROSBag<std::list<datastreamio::RobotGVINS_GNSSEph>>(const char *bag_file, const std::string eph_topic, const std::string imu_topic, const std::list<datastreamio::RobotGVINS_GNSSEph> &eph_data, int bag_mode, bool use_bagtime);
+    template bool Write_ROSMessage_ROSBag<std::list<datastreamio::GICILIB_GnssObservations>>(const char *bag_file, const std::string gnss_topic, const std::string imu_topic, const std::list<datastreamio::GICILIB_GnssObservations> &gnss_data, int bag_mode, bool use_bagtime);
+    template bool Write_ROSMessage_ROSBag<std::list<datastreamio::GICILIB_GnssEphemerides>>(const char *bag_file, const std::string eph_topic, const std::string imu_topic, const std::list<datastreamio::GICILIB_GnssEphemerides> &eph_data, int bag_mode, bool use_bagtime);
+
+    /**
+     * @brief       Write GNSS ephemeris data to ros bag file
+     * @note        1. The timestamp of imu data is used to publish message
+     *
+     * @param[in]   char*       bagfile        bag filepath
+     * @param[in]   string      eph_topic      gnss topic
+     * @param[in]   string      imu_topic      imu topic
+     * @param[in]   list        eph_data       gnss eph data
+     * @param[in]   int         bag_mode       1: write | 2: app | others: abnormal
+     * @param[in]   bool        msg_time       true: use message time to publish | false: use the imu time to publish
+     *
+     * @return      bool       true       write successfully
+     *                         false      fail to write
+     */
+    template <typename T>
+    bool Write_GNSSEphData_ROSBag(const char *bagfile, const std::string eph_topic, const std::string imu_topic, const std::list<T> &eph_data, int bagmode, bool msg_time)
+    {
+        ///< 1. Get the start and end timestamp of the rosbag
+        ros::Time start_time(0.0), end_time(0.0);
+        if (Get_StartEndTime_ROSBag(bagfile, imu_topic, start_time, end_time) == false)
+        {
+            ROS_ERROR("[Write_GNSSEphData_ROSBag] Fail to get the start and end timestamp of the rosbag.");
+            return false;
+        }
+
+        ///< 2. Write the position of base station to the rosbag
+        // 2.1 open bag file
+        rosbag::Bag outfile_bag;
+        if (bagmode == 1)
+            outfile_bag.open(bagfile, rosbag::bagmode::Write);
+        else if (bagmode == 2)
+            outfile_bag.open(bagfile, rosbag::bagmode::Append);
+        else
+        {
+            ROS_ERROR("[Write_GNSSEphData_ROSBag] Abnormous bagmode to open file.");
+            return false;
+        }
+        if (!outfile_bag.isOpen())
+        {
+            ROS_ERROR("[Write_GNSSEphData_ROSBag] Fail to open the rosbag file: %s to write gnss data.", bagfile);
+            return false;
+        }
+
+        // 2.2 write gnss eph data
+        for (auto iter = eph_data.begin(); iter != eph_data.end(); ++iter)
+        {
+            if (iter->header.stamp > start_time && iter->header.stamp < end_time)
+                outfile_bag.write(eph_topic, iter->header.stamp, (*iter));
+        }
+
+        // Remember to close the bag file
+        outfile_bag.close();
+
+        return true;
+    }
+
+    template bool Write_GNSSEphData_ROSBag<datastreamio::GICILIB_GnssEphemerides>(const char *bagfile, const std::string eph_topic, const std::string imu_topic, const std::list<datastreamio::GICILIB_GnssEphemerides> &eph_data, int bagmode, bool msg_time);
+
+    /**
+     * @brief       Write the position of GNSS base station to ros bag file
+     * @note        1. The timestamp of imu data is used to publish message
+     *
+     * @param[in]   char*           bagfile         bag filepath
+     * @param[in]   string          gnss_topic      gnss topic
+     * @param[in]   string          imu_topic       imu topic
+     * @param[in]   double[3]       basepos         base station position
+     * @param[in]   dataformat      datatype        data format
+     * @param[in]   int             bagmode         1: write | 2: app | others: abnormal
+     * @param[in]   bool            msg_time        true: use message time to publish | false: use start imu time to publish
+     *
+     * @return      bool       true       write successfully
+     *                         false      fail to write
+     */
+    extern bool Write_GNSSBasePos_ROSBag(const char *bagfile, const std::string gnss_topic, const std::string imu_topic, const double basepos[3], dataformat datatype, int bagmode, bool msg_time)
+    {
+        ///< 1. Get the start and end timestamp of the rosbag
+        ros::Time start_time(0.0), end_time(0.0);
+        if (Get_StartEndTime_ROSBag(bagfile, imu_topic, start_time, end_time) == false)
+        {
+            ROS_ERROR("[Write_GNSSBasePos_ROSBag] Fail to get the start and end timestamp of the rosbag.");
+            return false;
+        }
+
+        ///< 2. Write the position of base station to the rosbag
+        // 2.1 open bag file
+        rosbag::Bag outfile_bag;
+        if (bagmode == 1)
+            outfile_bag.open(bagfile, rosbag::bagmode::Write);
+        else if (bagmode == 2)
+            outfile_bag.open(bagfile, rosbag::bagmode::Append);
+        else
+        {
+            ROS_ERROR("The bag mode is wrong.");
+            return false;
+        }
+        if (!outfile_bag.isOpen())
+        {
+            ROS_ERROR("Fail to open the rosbag file: %s to write gnss data.", bagfile);
+            return false;
+        }
+
+        // 2.2 write each message
+        double deltaT = 30.0;
+        for (double timestamp = start_time.toSec(); timestamp <= end_time.toSec(); timestamp += deltaT)
+        {
+            datastreamio::GICILIB_GnssAntennaPosition gnss_antpos;
+            gnss_antpos.header.stamp = ros::Time(timestamp);
+            gnss_antpos.pos.push_back(basepos[0]);
+            gnss_antpos.pos.push_back(basepos[1]);
+            gnss_antpos.pos.push_back(basepos[2]);
+
+            if (msg_time == true)
+                outfile_bag.write(gnss_topic, gnss_antpos.header.stamp, gnss_antpos);
+            else
+                outfile_bag.write(gnss_topic, start_time, gnss_antpos);
+        }
+
+        // Remember to close the bag file
+        outfile_bag.close();
+
+        return true;
+    }
+
+    /**
      * @brief       Write gnss ephemeris data to file as RINEX 3.x format
      * @note
      *
@@ -403,11 +663,12 @@ namespace dataio_common
      * @brief       The main function to write GNSS solution data to rosbag file
      * @note
      *
-     * @param[in]   char*           output_filepath      filepath to write data
-     * @param[in]   list            sol_datas            GNSS solution data
-     * @param[in]   string          gnsssol_topic        ros topic
-     * @param[in]   dataformat      datatype             data type
-     * @param[in]   int             bagmode              1:write 2:app
+     * @param[in]   char*           filepath        filepath to write data
+     * @param[in]   list            soldatas        GNSS solution data
+     * @param[in]   string          imu_topic       ros topic
+     * @param[in]   string          gnss_topic      ros topic
+     * @param[in]   dataformat      datatype        data type
+     * @param[in]   int             bagmode         1:write 2:app
      *
      * @return      bool       true       write successful
      *                         false      fail to write
@@ -539,5 +800,49 @@ namespace dataio_common
 
             outfile_bag.write(gnsssol_topic, gnsssol_msg.header.stamp, gnsssol_msg);
         }
+    }
+
+    /**
+     * @brief       The main function to write INS solution data to text file
+     * @note
+     *
+     * @param[in]   char*           filepath      filepath to write data
+     * @param[in]   list            sol_datas     INS solution data
+     * @param[in]   dataformat      format        data format
+     *
+     * @return      bool       true       write successful
+     *                         false      fail to write
+     */
+    extern bool Write_INSolution_TXTFile_MAIN(const char *filepath, const std::list<Solution_INS> &sol_datas, const dataformat format)
+    {
+        if (sol_datas.size() <= 0)
+            return false;
+
+        ///< 1. Open file to output
+        FILE *outfile = fopen(filepath, "wt");
+        if (outfile == NULL)
+        {
+            ROS_ERROR("Fail to open the input file: %s", filepath);
+            return false;
+        }
+
+        ///< 2. Write solution data
+        for (auto onedata : sol_datas)
+        {
+            switch (format)
+            {
+            case RobotGVINS_Format:
+                fprintf(outfile, "%6d %12.6f %15.3f %15.3f %15.3f %8.3f %8.3f %8.3f %9.4f %9.4f %9.4f\n", onedata.gps_week, onedata.gps_second,
+                        onedata.position_XYZ[0], onedata.position_XYZ[1], onedata.position_XYZ[2],
+                        onedata.velocity_XYZ[0], onedata.velocity_XYZ[1], onedata.velocity_XYZ[2],
+                        onedata.attitude[0] * R2D, onedata.attitude[1] * R2D, onedata.attitude[2] * R2D);
+                break;
+            }
+        }
+
+        // Remember to close the file
+        fclose(outfile);
+
+        return true;
     }
 }
