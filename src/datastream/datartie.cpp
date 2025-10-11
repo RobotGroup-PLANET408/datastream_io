@@ -187,7 +187,7 @@ namespace dataio_common
         // 2. Use ros to publish message
         ros::NodeHandle nh;
         ros::Publisher pub_obs = nh.advertise<datastreamio::RobotGVINS_GNSSObs>(obs_topic, 200);
-        ros::Publisher pub_eph = nh.advertise<datastreamio::RobotGVINS_GNSSEph>(eph_topic, 200);
+        ros::Publisher pub_eph = nh.advertise<datastreamio::RobotGVINS_GNSSNav>(eph_topic, 200);
 
         // 3. Receive and publish data
         while (ros::ok())
@@ -206,7 +206,7 @@ namespace dataio_common
                 if (obsdata_ips.nsat > 0) // observation
                 {
                     datastreamio::RobotGVINS_GNSSObs obsdata_robot;
-                    Convert_GNSSObsData_IPS2RobotGVINS(&obsdata_ips, obsdata_robot);
+                    Convert_GNSSObsData_IPS2RobotGVINS(obsdata_ips, obsdata_robot);
 
                     // NOTE: use the current timestamp to publish
                     obsdata_robot.header.stamp = ros::Time::now();
@@ -215,15 +215,16 @@ namespace dataio_common
 
                 if (ephdata_ips.size() > 0) // ephemeris
                 {
-                    for (const auto &oneeph : ephdata_ips)
+                    datastreamio::RobotGVINS_GNSSNav nav_msg;
+                    for (const auto &iter : ephdata_ips)
                     {
-                        datastreamio::RobotGVINS_GNSSEph ephdata_robot;
-                        Convert_GNSSEphData_IPS2RobotGVINS(&oneeph, ephdata_robot);
-
-                        // NOTE: use the current timestamp to publish
-                        ephdata_robot.header.stamp = ros::Time::now();
-                        pub_eph.publish(ephdata_robot);
+                        datastreamio::RobotGVINS_GNSSEph eph_msg;
+                        Convert_GNSSEphData_IPS2RobotGVINS(iter, eph_msg);
+                        nav_msg.ephdata.push_back(eph_msg);
                     }
+                    // NOTE: use the current timestamp to publish
+                    nav_msg.header.stamp = ros::Time::now();
+                    pub_eph.publish(nav_msg);
                 }
             }
 

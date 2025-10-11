@@ -47,3 +47,4 @@ We are still working on improving the code reliability. For any technical issues
 * **2025.07.04** - The *(Version 1.1.0)*:  This version can receive GNSS raw data from Vision-RTK2(Fixposition), convert as RobotGVINS format, and publish as ros messages to process. It can also receive GNSS raw data from RTCM3 TCP stream and publish as ros messages. Thanks to the contribution of Yan zhehua, Zhao yueqing, Lei weihao.
 * **2025.07.20** - The *(Version 1.1.1)*:  This version integrated the codes, fixed some problems, and can read configuration files to process data conversion. Thanks to the contribution of Lei weihao.
 * **2025.09.05** - The *(Version 1.1.2)*:  This version can convert convert GNSS raw data from RINEX 3.x format to GICI-LIB format. Thanks to the contribution of Lei weihao.
+* **2025.09.28** - The *(Version 1.1.3)*:  This version used template to simplify funcionts and improve reliability. Thanks to the contribution of Lei weihao.

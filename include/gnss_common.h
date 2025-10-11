@@ -53,11 +53,11 @@ namespace gnss_common
     static const double gs_WGS84_FE = 1.0 / 298.257223563; ///< earth flattening (WGS84)
     static const double gs_WGS84_e2 = 2 * gs_WGS84_FE - SQR(gs_WGS84_FE);
 
-    static const bool gs_bSwitchGNSSFrq = false;
+    static const bool gs_bSwitchGNSSFrq = true;
     static const std::string gs_strGPSFrq[NFREQ] = {"L1", "L2", "L5"};
     static const std::string gs_strGLOFrq[NFREQ] = {"G1", "G2", "G3"};
     static const std::string gs_strBD2Frq[NFREQ] = {"B1I", "B2I", "B3I"};
-    static const std::string gs_strBD3Frq[NFREQ] = {"B1I", "B2I", "B3I"};
+    static const std::string gs_strBD3Frq[NFREQ] = {"B1I", "B1C", "B2a"};
     static const std::string gs_strGALFrq[NFREQ] = {"E1", "E5b", "E5a"};
     static const std::string gs_strQZSFrq[NFREQ] = {"L1", "L2", "L5"};
 

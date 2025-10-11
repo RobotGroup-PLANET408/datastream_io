@@ -29,58 +29,134 @@ namespace dataio_common
         if (src_data.size() <= 0)
             return false;
 
-        // 1. Store ephdata in groups according to PRN
-        // NOTE: GICILIB require that the code of GAL ephdate should be larger than 512
-        std::unordered_map<std::string, std::list<T>> prnGroups;
-        for (const auto &item : src_data)
+        switch (format)
         {
-            prnGroups[item.prn].push_back(item);
-        }
-
-        // 2. Find the nearest ephdata for each PRN
-        // NOTE: Remeber to clear old ephdata
-        dst_data.clear();
-        for (auto &group : prnGroups)
-        {
-            auto &prnList = group.second;
-
-            // (1) Sort all ephdata of this PRN by timestamp
-            prnList.sort([](const T &a, const T &b)
-                         { return a.week * 604800.0 + a.toes < b.week * 604800.0 + b.toes; });
-
-            // (2) Find the nearest timestamp using binary search
-            auto comp = [](const T &a, double value)
+        case dataformat::RobotGVINS_Format:
+            if constexpr (std::is_same_v<T, datastreamio::RobotGVINS_GNSSEph>)
             {
-                return a.week * 604800.0 + a.toes < value;
-            };
+                // 1. Store ephdata in groups according to PRN
+                // NOTE: GICILIB require that the code of GAL ephdate should be larger than 512
+                std::unordered_map<int, std::list<T>> prnGroups;
+                for (const auto &item : src_data)
+                {
+                    prnGroups[item.prn].push_back(item);
+                }
 
-            // (3) Find the first ephdata greater than timestamp
-            auto iter = std::lower_bound(prnList.begin(), prnList.end(), timestamp, comp);
-            if (iter == prnList.begin())
-            {
-                // the first element is the nearest
-                dst_data.push_back(*iter);
-            }
-            else if (iter == prnList.end())
-            {
-                // select the last one if timestamp is greater than all ephdata
-                dst_data.push_back(prnList.back());
+                // 2. Find the nearest ephdata for each PRN
+                // NOTE: Remeber to clear old ephdata
+                dst_data.clear();
+                for (auto &group : prnGroups)
+                {
+                    auto &prnList = group.second;
+
+                    // (1) Sort all ephdata of this PRN by timestamp
+                    prnList.sort([](const T &a, const T &b)
+                                 { return a.week * 604800.0 + a.toes < b.week * 604800.0 + b.toes; });
+
+                    // (2) Find the nearest timestamp using binary search
+                    auto comp = [](const T &a, double value)
+                    {
+                        return a.week * 604800.0 + a.toes < value;
+                    };
+
+                    auto iter = std::lower_bound(prnList.begin(), prnList.end(), timestamp, comp);
+                    if (iter == prnList.begin())
+                    {
+                        // the first element is the nearest
+                        dst_data.push_back(*iter);
+                    }
+                    else if (iter == prnList.end())
+                    {
+                        // select the last one if timestamp is greater than all ephdata
+                        dst_data.push_back(prnList.back());
+                    }
+                    else
+                    {
+                        // select the nearest one between the current and previous one
+                        auto prev = std::prev(iter);
+                        double diff1 = std::fabs((prev->week * 604800.0 + prev->toes) - timestamp);
+                        double diff2 = std::fabs((iter->week * 604800.0 + iter->toes) - timestamp);
+                        if (diff1 <= diff2)
+                            dst_data.push_back(*prev);
+                        else
+                            dst_data.push_back(*iter);
+                    }
+                }
             }
             else
             {
-                // select the nearest one between the current and previous one
-                auto prev = std::prev(iter);
-                double diff1 = std::fabs((prev->week * 604800.0 + prev->toes) - timestamp);
-                double diff2 = std::fabs((iter->week * 604800.0 + iter->toes) - timestamp);
-                if (diff1 <= diff2)
-                    dst_data.push_back(*prev);
-                else
-                    dst_data.push_back(*iter);
+                ROS_ERROR("[Bind_GNSSEphData_Single2Set] Unsupported RobotGVINS data format.");
+                return false;
             }
+            break;
+
+        case dataformat::GICILIB_Format:
+            if constexpr (std::is_same_v<T, datastreamio::GICILIB_GnssEphemeris>)
+            {
+                // 1. Store ephdata in groups according to PRN
+                // NOTE: GICILIB require that the code of GAL ephdate should be larger than 512
+                std::unordered_map<std::string, std::list<T>> prnGroups;
+                for (const auto &item : src_data)
+                {
+                    prnGroups[item.prn].push_back(item);
+                }
+
+                // 2. Find the nearest ephdata for each PRN
+                // NOTE: Remeber to clear old ephdata
+                dst_data.clear();
+                for (auto &group : prnGroups)
+                {
+                    auto &prnList = group.second;
+
+                    // (1) Sort all ephdata of this PRN by timestamp
+                    prnList.sort([](const T &a, const T &b)
+                                 { return a.week * 604800.0 + a.toes < b.week * 604800.0 + b.toes; });
+
+                    // (2) Find the nearest timestamp using binary search
+                    auto comp = [](const T &a, double value)
+                    {
+                        return a.week * 604800.0 + a.toes < value;
+                    };
+
+                    auto iter = std::lower_bound(prnList.begin(), prnList.end(), timestamp, comp);
+                    if (iter == prnList.begin())
+                    {
+                        // the first element is the nearest
+                        dst_data.push_back(*iter);
+                    }
+                    else if (iter == prnList.end())
+                    {
+                        // select the last one if timestamp is greater than all ephdata
+                        dst_data.push_back(prnList.back());
+                    }
+                    else
+                    {
+                        // select the nearest one between the current and previous one
+                        auto prev = std::prev(iter);
+                        double diff1 = std::fabs((prev->week * 604800.0 + prev->toes) - timestamp);
+                        double diff2 = std::fabs((iter->week * 604800.0 + iter->toes) - timestamp);
+                        if (diff1 <= diff2)
+                            dst_data.push_back(*prev);
+                        else
+                            dst_data.push_back(*iter);
+                    }
+                }
+            }
+            else
+            {
+                ROS_ERROR("[Bind_GNSSEphData_Single2Set] Unsupported GICI-LIB data format.");
+                return false;
+            }
+            break;
+
+        default:
+            ROS_ERROR("[Bind_GNSSEphData_Single2Set] Unsupported data format.");
+            break;
         }
 
         return true;
     }
+    template bool Bind_GNSSEphData_Single2Set<datastreamio::RobotGVINS_GNSSEph>(const std::list<datastreamio::RobotGVINS_GNSSEph> &src_data, std::list<datastreamio::RobotGVINS_GNSSEph> &dst_data, const double timestamp, const dataformat format);
     template bool Bind_GNSSEphData_Single2Set<datastreamio::GICILIB_GnssEphemeris>(const std::list<datastreamio::GICILIB_GnssEphemeris> &src_data, std::list<datastreamio::GICILIB_GnssEphemeris> &dst_data, const double timestamp, const dataformat format);
 
     /**
@@ -159,108 +235,190 @@ namespace dataio_common
     }
 
     /**
-     * @brief       The main function to convert GNSS solution data format
+     * @brief       Convert GNSS solution data from IPS to other format
      * @note
      *
-     * @param[in]   list            sol_datas     GNSS solution data
-     * @param[in]   dataformat      src_type      data format before conversion
-     * @param[in]   dataformat      dst_type      data format after conversion
+     * @param[in]   list            src_data     IPS data format
+     * @param[in]   list            dst_data     converted data
+     * @param[in]   dataformat      dst_format   destination data format
      *
      * @return      bool      true       convert successfully
      *                        false      fail to convert
      */
-    extern bool Convert_GNSSSolution_MAIN(std::list<Solution_GNSS> &sol_datas, const dataformat src_type, const dataformat dst_type)
+    template <typename T>
+    bool Convert_GNSSSolution_IPS2OtherFormat(const std::list<Solution_GNSS> &src_data, std::list<T> &dst_data, const dataformat dst_format)
     {
-        if (sol_datas.size() <= 0 || src_type == dst_type)
+        if (src_data.size() <= 0)
             return false;
 
-        // 1. Convert each data from VisionRTK_Format01
-        if (src_type == dataio_common::dataformat::VisionRTK_Format01)
+        for (const auto iter : src_data)
         {
-            switch (dst_type)
+            T one_data;
+
+            switch (dst_format)
             {
-            case dataio_common::dataformat::RobotGVINS_Format:
-                Convert_GNSSSolution_VisionRTK2RobotGVINS(sol_datas);
+            case dataformat::RobotGVINS_Format:
+                if constexpr (std::is_same_v<T, datastreamio::RobotGVINS_GNSSSol>)
+                {
+                    Convert_GNSSSolData_IPS2RobotGVINS(iter, one_data);
+                }
+                else
+                {
+                    ROS_ERROR("[Convert_GNSSSolution_IPS2OtherFormat] Unsupported RobotGVINS data format.");
+                    return false;
+                }
+                break;
+
+            default:
+                ROS_ERROR("[Convert_GNSSSolution_IPS2OtherFormat] Unsupporte data format.");
                 break;
             }
+
+            dst_data.push_back(one_data);
         }
 
         return true;
     }
+
+    template bool Convert_GNSSSolution_IPS2OtherFormat<datastreamio::RobotGVINS_GNSSSol>(const std::list<Solution_GNSS> &src_data, std::list<datastreamio::RobotGVINS_GNSSSol> &dst_data, const dataformat dst_format);
 
     /**
-     * @brief       Convert GNSS solution data from VisionRTK format to RobotGVINS format
-     * @note        1. GNSS velocity is calculated by position difference
-     *              2. The position and velocity covariance is converted from ENU to XYZ
+     * @brief       Convert GNSS solution data from IPS format to RobotGVINS format
+     * @note
      *
-     * @param[in]   list      sol_datas      GNSS solution data
-     * @param[out]
+     * @param[in]   Solution_GNSS           src_data      IPS format data
+     * @param[in]   RobotGVINS_GNSSSol      dst_data      RobotGVINS format data
      *
-     * @return      bool      true       convert successfully
-     *                        false     fail to convert
+     * @return      bool       true       convert successfully
+     *                         false      fail to convert
      */
-    extern bool Convert_GNSSSolution_VisionRTK2RobotGVINS(std::list<Solution_GNSS> &sol_datas)
+    extern bool Convert_GNSSSolData_IPS2RobotGVINS(const Solution_GNSS &src_data, datastreamio::RobotGVINS_GNSSSol &dst_data)
     {
-        if (sol_datas.size() < 2)
+        if (src_data.timestamp <= 0 || src_data.pubtime <= 0)
             return false;
 
-        // 1. get the time interval
-        auto first_sol = sol_datas.begin();
-        auto second_sol = ++sol_datas.begin();
-        double deltaT = second_sol->timestamp - first_sol->timestamp;
+        dst_data.header.stamp = ros::Time(src_data.pubtime);
+        dst_data.timestamp = src_data.timestamp;
 
-        // 2. the last ENU position to calculate velocity
-        double lastENU[3] = {0.0}, lastENUacc[3] = {0.0};
-        M31EQU(sol_datas.begin()->position_ENU, lastENU);
-        lastENUacc[0] = first_sol->position_acce;
-        lastENUacc[1] = first_sol->position_accn;
-        lastENUacc[2] = first_sol->position_accu;
-
-        // 3. convert each solution data
-        for (auto &iter : sol_datas)
+        for (int i = 0; i < 3; i++)
         {
-            // LLH to XYZ
-            double LLH[3] = {0.0}, XYZ[3] = {0.0};
-            M31EQU(iter.position_LLH, LLH);
-            gnss_common::LLH2XYZ(LLH, XYZ);
-            M31EQU(XYZ, iter.position_XYZ);
-
-            // position cov from horizontal/vertical to XYZ
-            Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
-            ENUCov(0, 0) = pow(iter.position_acch, 2) / 2.0;
-            ENUCov(1, 1) = pow(iter.position_acch, 2) / 2.0;
-            ENUCov(2, 2) = pow(iter.position_accv, 2);
-            Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
-            Eigen::Matrix3d XYZCov = (R_eTon.transpose()) * ENUCov * R_eTon;
-            EigenMatrix2Array(XYZCov, iter.positioncov_XYZ);
-
-            // calculate velocity from relative postion vector
-            iter.velocity_ENU[0] = (iter.position_ENU[0] - lastENU[0]) / deltaT;
-            iter.velocity_ENU[1] = (iter.position_ENU[1] - lastENU[1]) / deltaT;
-            iter.velocity_ENU[2] = (iter.position_ENU[2] - lastENU[2]) / deltaT;
-
-            // convert velocity from ENU to XYZ
-            Eigen::Vector3d VENU = Array2EigenVector(iter.velocity_ENU, 3);
-            Eigen::Vector3d VXYZ = (R_eTon.transpose()) * VENU;
-            EigenVector2Array(VXYZ, iter.velocity_XYZ);
-
-            // convert velocity cov from horizontal/vertical to XYZ
-            Eigen::Matrix3d VENUCov = Eigen::Matrix3d::Zero();
-            VENUCov(0, 0) = pow(iter.position_acce / deltaT, 2) + pow(lastENUacc[0] / deltaT, 2);
-            VENUCov(1, 1) = pow(iter.position_accn / deltaT, 2) + pow(lastENUacc[1] / deltaT, 2);
-            VENUCov(2, 2) = pow(iter.position_accu / deltaT, 2) + pow(lastENUacc[2] / deltaT, 2);
-            Eigen::Matrix3d VXYZCov = (R_eTon.transpose()) * VENUCov * R_eTon;
-            EigenMatrix2Array(VXYZCov, iter.velocitycov_XYZ);
-
-            // update the last ENU position
-            M31EQU(iter.position_ENU, lastENU);
-            lastENUacc[0] = iter.position_acce;
-            lastENUacc[1] = iter.position_accn;
-            lastENUacc[2] = iter.position_accu;
+            dst_data.pos_XYZ[i] = src_data.position_XYZ[i];
+            dst_data.vel_XYZ[i] = src_data.velocity_XYZ[i];
+        }
+        for (int i = 0; i < 9; i++)
+        {
+            dst_data.cov_pos_XYZ[i] = src_data.positioncov_XYZ[i];
+            dst_data.cov_vel_XYZ[i] = src_data.velocitycov_XYZ[i];
         }
 
         return true;
     }
+
+    // FIXME: NEED TO DELETE
+    // /**
+    //  * @brief       The main function to convert GNSS solution data format
+    //  * @note
+    //  *
+    //  * @param[in]   list            sol_datas     GNSS solution data
+    //  * @param[in]   dataformat      src_type      data format before conversion
+    //  * @param[in]   dataformat      dst_type      data format after conversion
+    //  *
+    //  * @return      bool      true       convert successfully
+    //  *                        false      fail to convert
+    //  */
+    // extern bool Convert_GNSSSolution_MAIN(std::list<Solution_GNSS> &sol_datas, const dataformat src_type, const dataformat dst_type)
+    // {
+    //     if (sol_datas.size() <= 0 || src_type == dst_type)
+    //         return false;
+
+    //     // 1. Convert each data from VisionRTK_Format01
+    //     if (src_type == dataio_common::dataformat::VisionRTK_Format01)
+    //     {
+    //         switch (dst_type)
+    //         {
+    //         case dataio_common::dataformat::RobotGVINS_Format:
+    //             Convert_GNSSSolution_VisionRTK2RobotGVINS(sol_datas);
+    //             break;
+    //         }
+    //     }
+
+    //     return true;
+    // }
+
+    // FIXME: NEED TO DELETE
+    // /**
+    //  * @brief       Convert GNSS solution data from VisionRTK format to RobotGVINS format
+    //  * @note        1. GNSS velocity is calculated by position difference
+    //  *              2. The position and velocity covariance is converted from ENU to XYZ
+    //  *
+    //  * @param[in]   list      sol_datas      GNSS solution data
+    //  * @param[out]
+    //  *
+    //  * @return      bool      true       convert successfully
+    //  *                        false     fail to convert
+    //  */
+    // extern bool Convert_GNSSSolution_VisionRTK2RobotGVINS(std::list<Solution_GNSS> &sol_datas)
+    // {
+    //     if (sol_datas.size() < 2)
+    //         return false;
+
+    //     // 1. get the time interval
+    //     auto first_sol = sol_datas.begin();
+    //     auto second_sol = ++sol_datas.begin();
+    //     double deltaT = second_sol->timestamp - first_sol->timestamp;
+
+    //     // 2. the last ENU position to calculate velocity
+    //     double lastENU[3] = {0.0}, lastENUacc[3] = {0.0};
+    //     M31EQU(sol_datas.begin()->position_ENU, lastENU);
+    //     lastENUacc[0] = first_sol->position_acce;
+    //     lastENUacc[1] = first_sol->position_accn;
+    //     lastENUacc[2] = first_sol->position_accu;
+
+    //     // 3. convert each solution data
+    //     for (auto &iter : sol_datas)
+    //     {
+    //         // LLH to XYZ
+    //         double LLH[3] = {0.0}, XYZ[3] = {0.0};
+    //         M31EQU(iter.position_LLH, LLH);
+    //         gnss_common::LLH2XYZ(LLH, XYZ);
+    //         M31EQU(XYZ, iter.position_XYZ);
+
+    //         // position cov from horizontal/vertical to XYZ
+    //         Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
+    //         ENUCov(0, 0) = pow(iter.position_acch, 2) / 2.0;
+    //         ENUCov(1, 1) = pow(iter.position_acch, 2) / 2.0;
+    //         ENUCov(2, 2) = pow(iter.position_accv, 2);
+    //         Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
+    //         Eigen::Matrix3d XYZCov = (R_eTon.transpose()) * ENUCov * R_eTon;
+    //         EigenMatrix2Array(XYZCov, iter.positioncov_XYZ);
+
+    //         // calculate velocity from relative postion vector
+    //         iter.velocity_ENU[0] = (iter.position_ENU[0] - lastENU[0]) / deltaT;
+    //         iter.velocity_ENU[1] = (iter.position_ENU[1] - lastENU[1]) / deltaT;
+    //         iter.velocity_ENU[2] = (iter.position_ENU[2] - lastENU[2]) / deltaT;
+
+    //         // convert velocity from ENU to XYZ
+    //         Eigen::Vector3d VENU = Array2EigenVector(iter.velocity_ENU, 3);
+    //         Eigen::Vector3d VXYZ = (R_eTon.transpose()) * VENU;
+    //         EigenVector2Array(VXYZ, iter.velocity_XYZ);
+
+    //         // convert velocity cov from horizontal/vertical to XYZ
+    //         Eigen::Matrix3d VENUCov = Eigen::Matrix3d::Zero();
+    //         VENUCov(0, 0) = pow(iter.position_acce / deltaT, 2) + pow(lastENUacc[0] / deltaT, 2);
+    //         VENUCov(1, 1) = pow(iter.position_accn / deltaT, 2) + pow(lastENUacc[1] / deltaT, 2);
+    //         VENUCov(2, 2) = pow(iter.position_accu / deltaT, 2) + pow(lastENUacc[2] / deltaT, 2);
+    //         Eigen::Matrix3d VXYZCov = (R_eTon.transpose()) * VENUCov * R_eTon;
+    //         EigenMatrix2Array(VXYZCov, iter.velocitycov_XYZ);
+
+    //         // update the last ENU position
+    //         M31EQU(iter.position_ENU, lastENU);
+    //         lastENUacc[0] = iter.position_acce;
+    //         lastENUacc[1] = iter.position_accn;
+    //         lastENUacc[2] = iter.position_accu;
+    //     }
+
+    //     return true;
+    // }
 
     /**
      * @brief       Convert the GNSS observation data from rtklib struct to IPS struct
@@ -283,8 +441,8 @@ namespace dataio_common
         char channel[5] = {'\0'};
         char gs_strFrq_tmp[NFREQ][5] = {'\0'};
         gnss_common::IPS_GPSTIME gt;
-
         gnss_common::ConvertTime(src[0].time, &gt);
+
         if (MinusGPSTIME(gt, dst->gt) == 0.0)
             return;
 
@@ -295,13 +453,16 @@ namespace dataio_common
         memset(dst->ngnss, 0, sizeof(int) * IPS_NSYS);
         dst->obs.clear();
 
+        ///< 2. Convert each satellite
         for (int i = 0; i < n; i++)
         {
             if (dst->nsat >= MAXOBS)
                 break;
 
+            // get satellite info
             gnss_common::IPS_OBSDATA_t iobs;
             iobs.prn = gnss_common::ConvertPrn(src[i].sat);
+
             if (iobs.prn > IPS_NSATMAX || iobs.prn < 1)
                 continue;
 
@@ -310,6 +471,7 @@ namespace dataio_common
                 std::memset(gs_strFrq_tmp[f], '\0', sizeof(gs_strFrq_tmp[f]));
             }
 
+            // switch frequency for each system
             gnss_common::satprn2no(iobs.prn, &sys);
             if (sys == IPS_SYSGPS)
             {
@@ -356,12 +518,15 @@ namespace dataio_common
             else
                 continue;
 
+            // get observation data
             for (int f = 0; f < NFREQ; f++)
             {
                 memset(channel, 5, '\0');
                 index = gnss_common::FindFrqIndex(sys, frq + f, channel, src[i]);
+
                 if (index < 0)
                     continue;
+
                 iobs.P[f] = src[i].P[index];
                 iobs.L[f] = src[i].L[index];
                 iobs.D[f] = src[i].D[index];
@@ -370,110 +535,113 @@ namespace dataio_common
                 strcpy(iobs.code[f], channel);
             }
 
+            // add this satellite
             dst->obs.push_back(iobs);
             dst->nsat++;
         }
+
+        // sort satellites according to PRN
         gnss_common::SortGNSSObs_IPSStruct(dst);
         frq = NULL;
 
         return;
     }
 
-    /**
-     * @brief       Convert one gnss observation data from IPS struct to RobotGVINS format
-     * @note
-     *
-     * @param[in]   IPS_OBSDATA *           ipsdata         observation data in IPS struct
-     * @param[in]   RobotGVINS_GNSSObs      robotdata       observation data in RobotGVINS struct
-     *
-     * @return
-     */
-    void Convert_GNSSObsData_IPS2RobotGVINS(const gnss_common::IPS_OBSDATA *ipsdata, datastreamio::RobotGVINS_GNSSObs &robotdata)
-    {
-        if (ipsdata == NULL)
-            return;
+    // /**
+    //  * @brief       Convert one gnss observation data from IPS struct to RobotGVINS format
+    //  * @note
+    //  *
+    //  * @param[in]   IPS_OBSDATA *           ipsdata         observation data in IPS struct
+    //  * @param[in]   RobotGVINS_GNSSObs      robotdata       observation data in RobotGVINS struct
+    //  *
+    //  * @return
+    //  */
+    // void Convert_GNSSObsData_IPS2RobotGVINS(const gnss_common::IPS_OBSDATA *ipsdata, datastreamio::RobotGVINS_GNSSObs &robotdata)
+    // {
+    //     if (ipsdata == NULL)
+    //         return;
 
-        // timestamp
-        robotdata.timestamp = ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec;
+    //     // timestamp
+    //     robotdata.timestamp = ipsdata->gt.GPSWeek * 604800 + ipsdata->gt.secsOfWeek + ipsdata->gt.fracOfSec;
 
-        // observation info
-        robotdata.flag = ipsdata->flag;
-        robotdata.nsat = ipsdata->nsat;
-        for (int i = 0; i < IPS_NSYS; i++)
-            robotdata.ngnss.push_back(ipsdata->ngnss[i]);
+    //     // observation info
+    //     robotdata.flag = ipsdata->flag;
+    //     robotdata.nsat = ipsdata->nsat;
+    //     for (int i = 0; i < IPS_NSYS; i++)
+    //         robotdata.ngnss.push_back(ipsdata->ngnss[i]);
 
-        // observation data for each satellite
-        for (int i = 0; i < ipsdata->obs.size(); i++)
-        {
-            datastreamio::RobotGVINS_GNSSSat sat_msg;
-            sat_msg.prn = ipsdata->obs.at(i).prn;
-            for (int f = 0; f < NFREQ; f++)
-            {
-                sat_msg.cp_meas.push_back(ipsdata->obs.at(i).L[f]);
-                sat_msg.pr_meas.push_back(ipsdata->obs.at(i).P[f]);
-                sat_msg.do_meas.push_back(ipsdata->obs.at(i).D[f]);
-                sat_msg.sig_cno.push_back(ipsdata->obs.at(i).S[f]);
-                sat_msg.code.push_back(ipsdata->obs.at(i).code[f]);
-                sat_msg.SNR.push_back(ipsdata->obs.at(i).SNR[f]);
-                sat_msg.LLI.push_back(ipsdata->obs.at(i).LLI[f]);
-                sat_msg.cs.push_back(ipsdata->obs.at(i).cs[f]);
-                sat_msg.P_TGD.push_back(ipsdata->obs.at(i).P_TGD[f]);
-                sat_msg.SMP.push_back(ipsdata->obs.at(i).SMP[f]);
-            }
-            robotdata.obsdata.push_back(sat_msg);
-        }
-    }
+    //     // observation data for each satellite
+    //     for (int i = 0; i < ipsdata->obs.size(); i++)
+    //     {
+    //         datastreamio::RobotGVINS_GNSSSat sat_msg;
+    //         sat_msg.prn = ipsdata->obs.at(i).prn;
+    //         for (int f = 0; f < NFREQ; f++)
+    //         {
+    //             sat_msg.cp_meas.push_back(ipsdata->obs.at(i).L[f]);
+    //             sat_msg.pr_meas.push_back(ipsdata->obs.at(i).P[f]);
+    //             sat_msg.do_meas.push_back(ipsdata->obs.at(i).D[f]);
+    //             sat_msg.sig_cno.push_back(ipsdata->obs.at(i).S[f]);
+    //             sat_msg.code.push_back(ipsdata->obs.at(i).code[f]);
+    //             sat_msg.SNR.push_back(ipsdata->obs.at(i).SNR[f]);
+    //             sat_msg.LLI.push_back(ipsdata->obs.at(i).LLI[f]);
+    //             sat_msg.cs.push_back(ipsdata->obs.at(i).cs[f]);
+    //             sat_msg.P_TGD.push_back(ipsdata->obs.at(i).P_TGD[f]);
+    //             sat_msg.SMP.push_back(ipsdata->obs.at(i).SMP[f]);
+    //         }
+    //         robotdata.obsdata.push_back(sat_msg);
+    //     }
+    // }
 
-    /**
-     * @brief       Convert all gnss observation data from IPS struct to RobotGVINS format
-     * @note
-     *
-     * @param[in]   list      ipsdata        gnss observation data in IPS format
-     * @param[out]  list      robotdata      gnss observation data in RobotGVINS format
-     *
-     * @return
-     */
-    extern void Convert_GNSSObsData_IPS2RobotGVINS(const std::list<gnss_common::IPS_OBSDATA> &ipsdata, std::list<datastreamio::RobotGVINS_GNSSObs> &robotdata)
-    {
-        if (ipsdata.size() <= 0)
-            return;
+    // /**
+    //  * @brief       Convert all gnss observation data from IPS struct to RobotGVINS format
+    //  * @note
+    //  *
+    //  * @param[in]   list      ipsdata        gnss observation data in IPS format
+    //  * @param[out]  list      robotdata      gnss observation data in RobotGVINS format
+    //  *
+    //  * @return
+    //  */
+    // extern void Convert_GNSSObsData_IPS2RobotGVINS(const std::list<gnss_common::IPS_OBSDATA> &ipsdata, std::list<datastreamio::RobotGVINS_GNSSObs> &robotdata)
+    // {
+    //     if (ipsdata.size() <= 0)
+    //         return;
 
-        for (auto iter : ipsdata)
-        {
-            datastreamio::RobotGVINS_GNSSObs one_msg;
+    //     for (auto iter : ipsdata)
+    //     {
+    //         datastreamio::RobotGVINS_GNSSObs one_msg;
 
-            // store data body
-            one_msg.header.stamp = ros::Time(iter.pubtime);
-            one_msg.timestamp = iter.gt.GPSWeek * 604800.0 + iter.gt.secsOfWeek + iter.gt.fracOfSec;
-            one_msg.flag = iter.flag;
-            one_msg.nsat = iter.nsat;
+    //         // store data body
+    //         one_msg.header.stamp = ros::Time(iter.pubtime);
+    //         one_msg.timestamp = iter.gt.GPSWeek * 604800.0 + iter.gt.secsOfWeek + iter.gt.fracOfSec;
+    //         one_msg.flag = iter.flag;
+    //         one_msg.nsat = iter.nsat;
 
-            for (int i = 0; i < IPS_NSYS; i++)
-                one_msg.ngnss.push_back(iter.ngnss[i]);
+    //         for (int i = 0; i < IPS_NSYS; i++)
+    //             one_msg.ngnss.push_back(iter.ngnss[i]);
 
-            for (int i = 0; i < iter.obs.size(); i++)
-            {
-                datastreamio::RobotGVINS_GNSSSat sat_msg;
-                sat_msg.prn = iter.obs.at(i).prn;
-                for (int f = 0; f < NFREQ; f++)
-                {
-                    sat_msg.cp_meas.push_back(iter.obs.at(i).L[f]);
-                    sat_msg.pr_meas.push_back(iter.obs.at(i).P[f]);
-                    sat_msg.do_meas.push_back(iter.obs.at(i).D[f]);
-                    sat_msg.sig_cno.push_back(iter.obs.at(i).S[f]);
-                    sat_msg.code.push_back(iter.obs.at(i).code[f]);
-                    sat_msg.SNR.push_back(iter.obs.at(i).SNR[f]);
-                    sat_msg.LLI.push_back(iter.obs.at(i).LLI[f]);
-                    sat_msg.cs.push_back(iter.obs.at(i).cs[f]);
-                    sat_msg.P_TGD.push_back(iter.obs.at(i).P_TGD[f]);
-                    sat_msg.SMP.push_back(iter.obs.at(i).SMP[f]);
-                }
-                one_msg.obsdata.push_back(sat_msg);
-            }
+    //         for (int i = 0; i < iter.obs.size(); i++)
+    //         {
+    //             datastreamio::RobotGVINS_GNSSSat sat_msg;
+    //             sat_msg.prn = iter.obs.at(i).prn;
+    //             for (int f = 0; f < NFREQ; f++)
+    //             {
+    //                 sat_msg.cp_meas.push_back(iter.obs.at(i).L[f]);
+    //                 sat_msg.pr_meas.push_back(iter.obs.at(i).P[f]);
+    //                 sat_msg.do_meas.push_back(iter.obs.at(i).D[f]);
+    //                 sat_msg.sig_cno.push_back(iter.obs.at(i).S[f]);
+    //                 sat_msg.code.push_back(iter.obs.at(i).code[f]);
+    //                 sat_msg.SNR.push_back(iter.obs.at(i).SNR[f]);
+    //                 sat_msg.LLI.push_back(iter.obs.at(i).LLI[f]);
+    //                 sat_msg.cs.push_back(iter.obs.at(i).cs[f]);
+    //                 sat_msg.P_TGD.push_back(iter.obs.at(i).P_TGD[f]);
+    //                 sat_msg.SMP.push_back(iter.obs.at(i).SMP[f]);
+    //             }
+    //             one_msg.obsdata.push_back(sat_msg);
+    //         }
 
-            robotdata.push_back(one_msg);
-        }
-    }
+    //         robotdata.push_back(one_msg);
+    //     }
+    // }
 
     /**
      * @brief       Convert rtklib nav data to IPS eph data
@@ -554,123 +722,129 @@ namespace dataio_common
         }
     }
 
-    /**
-     * @brief       Convert one gnss ephemeris data from IPS struct to RobotGVINS format
-     * @note
-     *
-     * @param[in]   IPS_GPSEPH *            ipsdata         ephemeris data in IPS struct
-     * @param[in]   RobotGVINS_GNSSEph      robotdata       ephemeris data in RobotGVINS struct
-     *
-     * @return
-     */
-    void Convert_GNSSEphData_IPS2RobotGVINS(const gnss_common::IPS_GPSEPH *ipsdata, datastreamio::RobotGVINS_GNSSEph &robotdata)
-    {
-        if (ipsdata == NULL)
-            return;
+    // FIXME: NEED TO DELETE
+    // /**
+    //  * @brief       Convert one gnss ephemeris data from IPS struct to RobotGVINS format
+    //  * @note
+    //  *
+    //  * @param[in]   IPS_GPSEPH *            ipsdata         ephemeris data in IPS struct
+    //  * @param[in]   RobotGVINS_GNSSEph      robotdata       ephemeris data in RobotGVINS struct
+    //  *
+    //  * @return
+    //  */
+    // void Convert_GNSSEphData_IPS2RobotGVINS(const gnss_common::IPS_GPSEPH *ipsdata, datastreamio::RobotGVINS_GNSSEph &robotdata)
+    // {
+    //     if (ipsdata == NULL)
+    //         return;
 
-        // get the ephemeris system
-        int sys = IPS_SYSNON;
-        int prn = ipsdata->prn;                      // GNSS prn in IPS program
-        int sat = gnss_common::satprn2no(prn, &sys); // GNSS prn for each system
+    //     // get the ephemeris system
+    //     int sys = IPS_SYSNON;
+    //     int prn = ipsdata->prn;                      // GNSS prn in IPS program
+    //     int sat = gnss_common::satprn2no(prn, &sys); // GNSS prn for each system
 
-        // get the data body
-        robotdata.prn = ipsdata->prn;
-        robotdata.iode = ipsdata->iode;
-        robotdata.iodc = ipsdata->iodc;
-        robotdata.sva = ipsdata->sva;
-        robotdata.svh = ipsdata->svh;
-        robotdata.week = ipsdata->week;
-        robotdata.code = ipsdata->code;
-        robotdata.flag = ipsdata->flag;
-        robotdata.toe = ipsdata->toe.GPSWeek * 604800 + ipsdata->toe.secsOfWeek + ipsdata->toe.fracOfSec;
-        robotdata.toc = ipsdata->toc.GPSWeek * 604800 + ipsdata->toc.secsOfWeek + ipsdata->toc.fracOfSec;
-        robotdata.ttr = ipsdata->ttr.GPSWeek * 604800 + ipsdata->ttr.secsOfWeek + ipsdata->ttr.fracOfSec;
-        robotdata.eph_A = ipsdata->A;
-        robotdata.eph_e = ipsdata->e;
-        robotdata.i0 = ipsdata->i0;
-        robotdata.OMG0 = ipsdata->OMG0;
-        robotdata.omg = ipsdata->omg;
-        robotdata.M0 = ipsdata->M0;
-        robotdata.deln = ipsdata->deln;
-        robotdata.OMGd = ipsdata->OMGd;
-        robotdata.idot = ipsdata->idot;
-        robotdata.crc = ipsdata->crc;
-        robotdata.crs = ipsdata->crs;
-        robotdata.cuc = ipsdata->cuc;
-        robotdata.cus = ipsdata->cus;
-        robotdata.cic = ipsdata->cic;
-        robotdata.cis = ipsdata->cis;
-        robotdata.toes = ipsdata->toes;
-        robotdata.fit = ipsdata->fit;
-        robotdata.f0 = ipsdata->f0;
-        robotdata.f1 = ipsdata->f1;
-        robotdata.f2 = ipsdata->f2;
-        for (int i = 0; i < 4; i++)
-            robotdata.tgd[i] = ipsdata->tgd[i];
-    }
+    //     // get the data body
+    //     robotdata.prn = ipsdata->prn;
+    //     robotdata.iode = ipsdata->iode;
+    //     robotdata.iodc = ipsdata->iodc;
+    //     robotdata.sva = ipsdata->sva;
+    //     robotdata.svh = ipsdata->svh;
+    //     robotdata.week = ipsdata->week;
+    //     robotdata.code = ipsdata->code;
+    //     robotdata.flag = ipsdata->flag;
+    //     robotdata.toe = ipsdata->toe.GPSWeek * 604800 + ipsdata->toe.secsOfWeek + ipsdata->toe.fracOfSec;
+    //     robotdata.toc = ipsdata->toc.GPSWeek * 604800 + ipsdata->toc.secsOfWeek + ipsdata->toc.fracOfSec;
+    //     robotdata.ttr = ipsdata->ttr.GPSWeek * 604800 + ipsdata->ttr.secsOfWeek + ipsdata->ttr.fracOfSec;
+    //     robotdata.eph_A = ipsdata->A;
+    //     robotdata.eph_e = ipsdata->e;
+    //     robotdata.i0 = ipsdata->i0;
+    //     robotdata.OMG0 = ipsdata->OMG0;
+    //     robotdata.omg = ipsdata->omg;
+    //     robotdata.M0 = ipsdata->M0;
+    //     robotdata.deln = ipsdata->deln;
+    //     robotdata.OMGd = ipsdata->OMGd;
+    //     robotdata.idot = ipsdata->idot;
+    //     robotdata.crc = ipsdata->crc;
+    //     robotdata.crs = ipsdata->crs;
+    //     robotdata.cuc = ipsdata->cuc;
+    //     robotdata.cus = ipsdata->cus;
+    //     robotdata.cic = ipsdata->cic;
+    //     robotdata.cis = ipsdata->cis;
+    //     robotdata.toes = ipsdata->toes;
+    //     robotdata.fit = ipsdata->fit;
+    //     robotdata.f0 = ipsdata->f0;
+    //     robotdata.f1 = ipsdata->f1;
+    //     robotdata.f2 = ipsdata->f2;
+    //     for (int i = 0; i < 4; i++)
+    //         robotdata.tgd[i] = ipsdata->tgd[i];
+    // }
 
-    /**
-     * @brief       Convert all gnss ephemeris data from IPS struct to RobotGVINS format
-     * @note
-     *
-     * @param[in]   list      ipsdata        gnss ephemeris data in IPS format
-     * @param[out]  list      robotdata      gnss ephemeris data in RobotGVINS format
-     *
-     * @return
-     */
-    extern void Convert_GNSSEphData_IPS2RobotGVINS(const std::list<gnss_common::IPS_GPSEPH> &ipsdata, std::list<datastreamio::RobotGVINS_GNSSEph> &robotdata)
-    {
-        if (ipsdata.size() <= 0)
-            return;
+    // /**
+    //  * @brief       Convert all gnss ephemeris data from IPS struct to RobotGVINS format
+    //  * @note
+    //  *
+    //  * @param[in]   list      ipsdata        gnss ephemeris data in IPS format
+    //  * @param[out]  list      robotdata      gnss ephemeris data in RobotGVINS format
+    //  *
+    //  * @return
+    //  */
+    // extern void Convert_GNSSEphData_IPS2RobotGVINS(const std::list<gnss_common::IPS_GPSEPH> &ipsdata, std::list<datastreamio::RobotGVINS_GNSSEph> &robotdata)
+    // {
+    //     if (ipsdata.size() <= 0)
+    //         return;
 
-        for (auto iter : ipsdata)
-        {
-            datastreamio::RobotGVINS_GNSSEph one_msg;
+    //     for (auto iter : ipsdata)
+    //     {
+    //         datastreamio::RobotGVINS_GNSSEph one_msg;
 
-            // get the ephemeris system
-            int sys = IPS_SYSNON;
-            int prn = iter.prn;                             // GNSS prn in IPS program
-            int sat = gnss_common::satprn2no(prn, &sys);    // GNSS prn for each system
-            one_msg.header.stamp = ros::Time(iter.pubtime); // the timestamp to publish ros message
+    //         // get the ephemeris system
+    //         int sys = IPS_SYSNON;
+    //         int prn = iter.prn;                             // GNSS prn in IPS program
+    //         int sat = gnss_common::satprn2no(prn, &sys);    // GNSS prn for each system
+    //         one_msg.header.stamp = ros::Time(iter.pubtime); // the timestamp to publish ros message
 
-            // get the data body
-            one_msg.prn = iter.prn;
-            one_msg.iode = iter.iode;
-            one_msg.iodc = iter.iodc;
-            one_msg.sva = iter.sva;
-            one_msg.svh = iter.svh;
-            one_msg.week = iter.week;
-            one_msg.code = iter.code;
-            one_msg.flag = iter.flag;
-            one_msg.toe = iter.toe.GPSWeek * 604800 + iter.toe.secsOfWeek + iter.toe.fracOfSec;
-            one_msg.toc = iter.toc.GPSWeek * 604800 + iter.toc.secsOfWeek + iter.toc.fracOfSec;
-            one_msg.ttr = iter.ttr.GPSWeek * 604800 + iter.ttr.secsOfWeek + iter.ttr.fracOfSec;
-            one_msg.eph_A = iter.A;
-            one_msg.eph_e = iter.e;
-            one_msg.i0 = iter.i0;
-            one_msg.OMG0 = iter.OMG0;
-            one_msg.omg = iter.omg;
-            one_msg.M0 = iter.M0;
-            one_msg.deln = iter.deln;
-            one_msg.OMGd = iter.OMGd;
-            one_msg.idot = iter.idot;
-            one_msg.crc = iter.crc;
-            one_msg.crs = iter.crs;
-            one_msg.cuc = iter.cuc;
-            one_msg.cus = iter.cus;
-            one_msg.cic = iter.cic;
-            one_msg.cis = iter.cis;
-            one_msg.toes = iter.toes;
-            one_msg.fit = iter.fit;
-            one_msg.f0 = iter.f0;
-            one_msg.f1 = iter.f1;
-            one_msg.f2 = iter.f2;
-            for (int i = 0; i < 4; i++)
-                one_msg.tgd[i] = iter.tgd[i];
+    //         // get the data body
+    //         one_msg.prn = iter.prn;
+    //         one_msg.iode = iter.iode;
+    //         one_msg.iodc = iter.iodc;
+    //         one_msg.sva = iter.sva;
+    //         one_msg.svh = iter.svh;
+    //         one_msg.week = iter.week;
+    //         one_msg.code = iter.code;
+    //         one_msg.flag = iter.flag;
+    //         one_msg.toe = iter.toe.GPSWeek * 604800 + iter.toe.secsOfWeek + iter.toe.fracOfSec;
+    //         one_msg.toc = iter.toc.GPSWeek * 604800 + iter.toc.secsOfWeek + iter.toc.fracOfSec;
+    //         one_msg.ttr = iter.ttr.GPSWeek * 604800 + iter.ttr.secsOfWeek + iter.ttr.fracOfSec;
+    //         one_msg.eph_A = iter.A;
+    //         one_msg.eph_e = iter.e;
+    //         one_msg.i0 = iter.i0;
+    //         one_msg.OMG0 = iter.OMG0;
+    //         one_msg.omg = iter.omg;
+    //         one_msg.M0 = iter.M0;
+    //         one_msg.deln = iter.deln;
+    //         one_msg.OMGd = iter.OMGd;
+    //         one_msg.idot = iter.idot;
+    //         one_msg.crc = iter.crc;
+    //         one_msg.crs = iter.crs;
+    //         one_msg.cuc = iter.cuc;
+    //         one_msg.cus = iter.cus;
+    //         one_msg.cic = iter.cic;
+    //         one_msg.cis = iter.cis;
+    //         one_msg.toes = iter.toes;
 
-            robotdata.push_back(one_msg);
-        }
-    }
+    //         // FIXME: add codes to debug
+    //         // if (sys == IPS_SYSBD2 || sys == IPS_SYSBD3)
+    //         //     one_msg.toes -= 14.0;
+
+    //         one_msg.fit = iter.fit;
+    //         one_msg.f0 = iter.f0;
+    //         one_msg.f1 = iter.f1;
+    //         one_msg.f2 = iter.f2;
+    //         for (int i = 0; i < 4; i++)
+    //             one_msg.tgd[i] = iter.tgd[i];
+
+    //         robotdata.push_back(one_msg);
+    //     }
+    // }
 
     /**
      * @brief       Convert GNSS observation data from IPS format to RobotGVINS format
@@ -809,13 +983,13 @@ namespace dataio_common
                 }
                 else
                 {
-                    ROS_ERROR("[Convert_GNSSObsData_IPS2OtherFormat] Unsupported data format.");
+                    ROS_ERROR("[Convert_GNSSObsData_IPS2OtherFormat] Unsupported GICILIB data format.");
                     return false;
                 }
                 break;
 
             default:
-                ROS_ERROR("[Convert_GNSSObsData_IPS2OtherFormat] Unsupported GICILIB data format.");
+                ROS_ERROR("[Convert_GNSSObsData_IPS2OtherFormat] Unsupported data format.");
                 break;
             }
 

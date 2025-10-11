@@ -10,6 +10,7 @@
 #include "gnss_common.h"
 #include "data_in.h"
 #include "data_conv.h"
+#include "data_out.h"
 
 namespace dataio_common
 {
@@ -446,10 +447,10 @@ namespace dataio_common
             if (timesys == timesystem::Linux_time)
                 pubtime = pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
-            // FIXME: output information to debug
+            // If need, write raw ublox format data
             if (0)
             {
-                std::ofstream outfile("/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/log/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                std::ofstream outfile("/home/leiwh/Research/Data/Others/20230925/log/gnss_obs.ubx", std::ios::binary | std::ios::app);
                 outfile.write(reinterpret_cast<const char *>(gnss_msg->message.data.data()), gnss_msg->message.data.size());
                 outfile.close();
             }
@@ -483,6 +484,12 @@ namespace dataio_common
                     {
                         if (ips_eph[i].toc.GPSWeek <= 0)
                             continue;
+
+                        // FIXME: add codes to debug
+                        // int sys = IPS_SYSNON;
+                        // gnss_common::satprn2no(ips_eph[i].prn, &sys);
+                        // if (sys == IPS_SYSBD2 || sys == IPS_ISYSBD3)
+                        //     ips_eph[i].toes = ips_eph[i].toes + 14.0;
 
                         // NOTE: use the message timestamp to publish
                         ips_eph[i].pubtime = pubtime;
@@ -580,27 +587,473 @@ namespace dataio_common
      */
     extern bool Extract_GNSSObsData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
     {
-        // 1. Open the rinex file
-        FILE *ifp = fopen(rinex_infilepath, "rt");
-        if (!ifp)
+        // FIXME: NEED TO DELETE
+        // // 1. Open the rinex file
+        // FILE *ifp = fopen(rinex_infilepath, "rt");
+        // if (!ifp)
+        // {
+        //     printf("Fail to open rinex observation file!\n");
+        //     return false;
+        // }
+
+        // // 2. Prepare variables
+        // double dVal = 0;
+        // const char sys_str[IPS_NSYS + 1] = {"GRCCEJ"};
+        // char buff[IPS_MAXSIZE], *label = buff + 60, ch[128] = {'\0'};
+        // int version = 0, prn = 0, sys = 0, sys_id = 0, GNSSTypeNum[IPS_NSYS] = {0};
+        // std::string timeSys = "GPS";
+        // std::vector<std::string> GNSSType[IPS_NSYS];
+        // std::map<std::string, double> PhaseShift[IPS_NSYS];
+        // gnss_common::IPS_OBSHEAD obsHead;
+        // int GNSSObsPos[IPS_NSYS][4 * NFREQ] = {{0}}; // P1,P2,P3,L1,L2,L5,D1,D2,D5,S1,S2,S5
+        // int GPSObsPosX[4 * NFREQ] = {0};             // P1,P2,P3,L1,L2,L5,D1,D2,D5,S1,S2,S5
+        // std::string CodeType[4] = {"C", "L", "D", "S"};
+        // std::string GNSSCodePris[IPS_NSYS][5] = {
+        //     {"CPYWMNSLX", "PYWCMNDSLX", "IQX", "", ""}, // GPS
+        //     {"PC", "PC", "IQX", "", ""},                // GLO
+        //     {"IQX", "IQX", "IQXA", "", ""},             // BD2
+        //     {"IQX", "IQX", "IQXA", "DPXA", "DPX"},      // BD3
+        //     {"CABXZ", "IQX", "IQX", "IQX", "ABCXZ"},    // GAL
+        //     {"CSLXZ", "SLX", "IQXDPZ", "SLXEZ", ""},    // QZS
+        // };
+        // std::string GNSSCodeFreq[IPS_NSYS][5] = {
+        //     {"1", "2", "5", " ", " "}, // GPS
+        //     {"1", "2", "3", " ", " "}, // GLO
+        //     {"2", "7", "6", " ", " "}, // BD2
+        //     {"2", "7", "6", "1", "5"}, // BD3
+        //     {"1", "5", "7", "8", "6"}, // GAL
+        //     {"1", "2", "5", "6", " "}, // QZS
+        // };
+        // std::vector<std::string> GNSSTypeRead[IPS_NSYS];
+        // for (int i = 0; i < IPS_NSYS; i++)
+        // {
+        //     GNSSTypeRead[i].resize(4 * NFREQ, "   ");
+        // }
+
+        // // switch the gnss frequency
+        // if (gnss_common::gs_bSwitchGNSSFrq)
+        // {
+        //     for (int f = 0; f < NFREQ; f++)
+        //     {
+        //         if (gnss_common::gs_strBD2Frq[f] == "B1I")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
+        //             GNSSCodeFreq[IPS_ISYSBD2][f] = "2";
+        //         }
+        //         else if (gnss_common::gs_strBD2Frq[f] == "B2I")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
+        //             GNSSCodeFreq[IPS_ISYSBD2][f] = "7";
+        //         }
+        //         else if (gnss_common::gs_strBD2Frq[f] == "B3I")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD2][f] = "IQXA";
+        //             GNSSCodeFreq[IPS_ISYSBD2][f] = "6";
+        //         }
+        //     }
+
+        //     for (int f = 0; f < NFREQ; f++)
+        //     {
+        //         if (gnss_common::gs_strBD3Frq[f] == "B1I")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
+        //             GNSSCodeFreq[IPS_ISYSBD3][f] = "2";
+        //         }
+        //         else if (gnss_common::gs_strBD3Frq[f] == "B2I" || gnss_common::gs_strBD3Frq[f] == "B2b")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
+        //             GNSSCodeFreq[IPS_ISYSBD3][f] = "7";
+        //         }
+        //         else if (gnss_common::gs_strBD3Frq[f] == "B3I")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD3][f] = "IQXA";
+        //             GNSSCodeFreq[IPS_ISYSBD3][f] = "6";
+        //         }
+        //         else if (gnss_common::gs_strBD3Frq[f] == "B1C")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD3][f] = "DPXA";
+        //             GNSSCodeFreq[IPS_ISYSBD3][f] = "1";
+        //         }
+        //         else if (gnss_common::gs_strBD3Frq[f] == "B2a")
+        //         {
+        //             GNSSCodePris[IPS_ISYSBD3][f] = "DPX";
+        //             GNSSCodeFreq[IPS_ISYSBD3][f] = "5";
+        //         }
+        //     }
+        // }
+
+        // // 3. Read the header info
+        // while (fgets(buff, IPS_MAXSIZE, ifp))
+        // {
+        //     if (strstr(label, "RINEX VERSION / TYPE"))
+        //     {
+        //         xstrmid(buff, 5, 1, ch);
+        //         version = atoi(ch);
+        //     }
+        //     else if (strstr(label, "REC # / TYPE / VERS"))
+        //     {
+        //         xstrmid(buff, 20, 20, obsHead.recType);
+        //     }
+        //     else if (strstr(label, "ANT # / TYPE"))
+        //     {
+        //         xstrmid(buff, 20, 20, obsHead.antType);
+        //     }
+        //     else if (strstr(label, "APPROX POSITION XYZ"))
+        //     {
+        //         obsHead.XYZ[0] = str2num(buff, 0, 14);
+        //         obsHead.XYZ[1] = str2num(buff, 14, 14);
+        //         obsHead.XYZ[2] = str2num(buff, 28, 14);
+        //     }
+        //     else if (strstr(label, "ANTENNA: DELTA H/E/N"))
+        //     {
+        //         obsHead.ant[2] = str2num(buff, 0, 14);
+        //         obsHead.ant[0] = str2num(buff, 14, 14);
+        //         obsHead.ant[1] = str2num(buff, 28, 14);
+        //     }
+        //     else if (strstr(label, "SYS / # / OBS TYPES"))
+        //     {
+        //         sys_id = -1;
+
+        //         for (int k = 0; k < IPS_NSYS; k++)
+        //         {
+        //             if (buff[0] == sys_str[k])
+        //             {
+        //                 sys_id = k;
+        //                 break;
+        //             }
+        //         }
+
+        //         if (sys_id < 0)
+        //             continue;
+
+        //         GNSSTypeNum[sys_id] = (int)str2num(buff, 3, 3);
+
+        //         for (int i = 0, j = 7; i < GNSSTypeNum[sys_id]; i++, j += 4)
+        //         {
+        //             if (j > 58)
+        //             {
+        //                 if (!fgets(buff, IPS_MAXSIZE, ifp))
+        //                     return false;
+        //                 j = 7;
+        //             }
+
+        //             xstrmid(buff, j, 3, ch);
+
+        //             if (buff[0] == 'C' && (ch[2] == 'I' || ch[2] == 'Q') && ch[1] == '1')
+        //                 ch[1] = '2';
+
+        //             GNSSType[sys_id].push_back(std::string(ch));
+        //         }
+
+        //         if (sys_id == IPS_ISYSBD2)
+        //         {
+        //             GNSSTypeNum[IPS_ISYSBD3] = GNSSTypeNum[IPS_ISYSBD2];
+        //             GNSSType[IPS_ISYSBD3] = GNSSType[IPS_ISYSBD2];
+        //         }
+        //     }
+        //     else if (strstr(label, "SYS / PHASE SHIFT"))
+        //     {
+        //         sys_id = -1;
+
+        //         for (int k = 0; k < IPS_NSYS; k++)
+        //         {
+        //             if (buff[0] == sys_str[k])
+        //             {
+        //                 sys_id = k;
+        //                 break;
+        //             }
+        //         }
+
+        //         if (sys_id < 0)
+        //             continue;
+
+        //         xstrmid(buff, 2, 3, ch);
+        //         dVal = str2num(buff, 6, 8);
+        //         PhaseShift[sys_id][std::string(ch)] = dVal;
+
+        //         if (sys_id == IPS_ISYSBD2)
+        //         {
+        //             PhaseShift[IPS_ISYSBD3][std::string(ch)] = dVal;
+        //         }
+        //     }
+        //     else if (strstr(label, "INTERVAL"))
+        //     {
+        //         obsHead.dt = str2num(buff, 0, 60);
+        //     }
+        //     else if (strstr(label, "TIME OF FIRST OBS"))
+        //     {
+        //         xstrmid(buff, 48, 3, ch);
+        //         if (ch[0] != ' ')
+        //             timeSys = std::string(ch);
+        //     }
+        //     else if (strstr(label, "END OF HEADER"))
+        //     {
+        //         break;
+        //     }
+        // }
+
+        // if (version != 3)
+        // {
+        //     printf("RINEX VERSION is not 3.0!\n");
+        //     return false;
+        // }
+
+        // if (timeSys != std::string("GPS"))
+        // {
+        //     printf("Time system is not GPS!\n");
+        //     return false;
+        // }
+
+        // bool bflag = false;
+
+        // for (sys_id = 0; sys_id < IPS_NSYS; sys_id++)
+        // {
+        //     for (int ncode = 0; ncode < 4; ncode++)
+        //     {
+        //         for (int frq = 0; frq < NFREQ; frq++)
+        //         {
+        //             bflag = false;
+
+        //             if (sys_id == 0)
+        //             {
+        //                 std::string code = CodeType[ncode] + GNSSCodeFreq[sys_id][frq] + "X";
+        //                 for (int j = 0; j < (int)GNSSType[sys_id].size(); j++)
+        //                 {
+        //                     if (code == GNSSType[sys_id][j])
+        //                     {
+        //                         GPSObsPosX[ncode * NFREQ + frq] = j + 1;
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+
+        //             for (int i = 0; i < (int)GNSSCodePris[sys_id][frq].size(); i++)
+        //             {
+        //                 std::string code = CodeType[ncode] + GNSSCodeFreq[sys_id][frq] + GNSSCodePris[sys_id][frq][i];
+
+        //                 for (int j = 0; j < (int)GNSSType[sys_id].size(); j++)
+        //                 {
+        //                     if (code == GNSSType[sys_id][j])
+        //                     {
+        //                         GNSSObsPos[sys_id][ncode * NFREQ + frq] = j + 1;
+        //                         GNSSTypeRead[sys_id][ncode * NFREQ + frq] = code;
+        //                         bflag = true;
+        //                         break;
+        //                     }
+        //                 }
+
+        //                 if (bflag)
+        //                     break;
+        //             }
+        //         }
+        //     }
+        // }
+
+        // double PhaseShiftCorr[IPS_NSYS][NFREQ] = {0.0};
+        // double PhaseShiftCorrX[NFREQ] = {0.0};
+        // for (int i = 0; i < IPS_NSYS; i++)
+        // {
+        //     for (int j = 0; j < NFREQ; j++)
+        //     {
+        //         PhaseShiftCorr[i][j] = PhaseShift[i][GNSSTypeRead[i][NFREQ + j]];
+        //     }
+        // }
+        // PhaseShiftCorrX[0] = -PhaseShift[0]["L1X"];
+        // PhaseShiftCorrX[1] = -PhaseShift[0]["L2X"];
+        // PhaseShiftCorrX[2] = -PhaseShift[0]["L5X"];
+
+        // /// 4. Read the body info
+        // int SatSYS = IPS_SYSALL;
+        // int flag = 0; // event flag
+        // int nsat = 0; // satellite number
+
+        // // read the observation data in each epoch
+        // while (fgets(buff, IPS_MAXSIZE, ifp))
+        // {
+        //     if (feof(ifp))
+        //         break;
+
+        //     gnss_common::IPS_OBSDATA obsData;
+
+        //     /* decode obs epoch */
+        //     {
+        //         if (buff[0] != '>')
+        //             continue;
+
+        //         /* epoch flag: 3:new site,4:header info,5:external event */
+        //         nsat = (int)str2num(buff, 32, 3);
+        //         if (nsat <= 0)
+        //             continue;
+
+        //         flag = (int)str2num(buff, 31, 1);
+        //         if (3 <= flag && flag <= 5)
+        //         {
+        //             // 3-5 represents the time info
+        //             for (int p = 0; p < nsat; p++)
+        //                 fgets(buff, IPS_MAXSIZE, ifp);
+        //             continue;
+        //         }
+
+        //         obsData.gt = gnss_common::str2time(buff, 1, 28);
+
+        //         int nsatValid = 0; // the number of available satellites
+
+        //         for (int i = 0; i < nsat; i++)
+        //         {
+        //             gnss_common::IPS_OBSDATA_t obst;
+
+        //             fgets(buff, IPS_MAXSIZE, ifp);
+
+        //             xstrmid(buff, 0, 3, ch);
+        //             prn = gnss_common::satno2prn(ch);
+        //             if (prn == 0)
+        //                 continue;
+
+        //             sys = IPS_SYSNON;
+        //             gnss_common::satprn2no(prn, &sys);
+
+        //             bool bpush = false;
+
+        //             sys_id = gnss_common::Sys2Index(sys);
+
+        //             if (SatSYS & sys)
+        //             {
+        //                 bpush = true;
+        //                 int pos = 0;
+        //                 for (int k = 0; k < NFREQ; k++)
+        //                 {
+        //                     bool bX = false;
+
+        //                     // L
+        //                     pos = GNSSObsPos[sys_id][NFREQ + k];
+        //                     if (pos > 0)
+        //                     {
+        //                         pos--;
+        //                         obst.L[k] = str2num(buff, 3 + 16 * pos, 14);
+        //                         obst.LLI[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 14, 1);
+        //                         obst.SNR[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 15, 1);
+        //                         if (obst.L[k] != 0.0)
+        //                             obst.L[k] += PhaseShiftCorr[0][k];
+
+        //                         bX = (sys == IPS_SYSGPS && obst.L[k] == 0.0 && GNSSTypeRead[sys_id][NFREQ + k][2] == 'W');
+        //                     }
+
+        //                     if (bX)
+        //                     {
+        //                         pos = GPSObsPosX[NFREQ + k];
+        //                         if (pos > 0)
+        //                         {
+        //                             pos--;
+        //                             obst.L[k] = str2num(buff, 3 + 16 * pos, 14);
+        //                             obst.LLI[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 14, 1);
+        //                             obst.SNR[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 15, 1);
+        //                             if (obst.L[k] != 0.0)
+        //                                 obst.L[k] += PhaseShiftCorrX[k];
+        //                         }
+
+        //                         // P
+        //                         pos = GPSObsPosX[k];
+        //                         if (pos > 0)
+        //                         {
+        //                             pos--;
+        //                             obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
+        //                         }
+        //                         obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
+        //                         obst.code[k][1] = 'X';
+
+        //                         // S
+        //                         pos = GPSObsPosX[NFREQ * 3 + k];
+        //                         if (pos > 0)
+        //                         {
+        //                             pos--;
+        //                             obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
+        //                         }
+        //                     }
+
+        //                     if (obst.P[k] == 0.0)
+        //                     {
+        //                         pos = GNSSObsPos[sys_id][k];
+        //                         if (pos > 0)
+        //                         {
+        //                             pos--;
+        //                             obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
+        //                         }
+        //                         obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
+        //                         obst.code[k][1] = GNSSTypeRead[sys_id][k][2];
+        //                     }
+
+        //                     // S
+        //                     if (obst.S[k] == 0.0)
+        //                     {
+        //                         pos = GNSSObsPos[sys_id][NFREQ * 3 + k];
+        //                         if (pos > 0)
+        //                         {
+        //                             pos--;
+        //                             obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
+        //                         }
+        //                     }
+
+        //                     // D
+        //                     pos = GNSSObsPos[sys_id][NFREQ * 2 + k];
+        //                     if (pos > 0)
+        //                     {
+        //                         pos--;
+        //                         obst.D[k] = str2num(buff, 3 + 16 * pos, 14);
+        //                     }
+        //                 }
+        //             }
+
+        //             if (bpush)
+        //             {
+        //                 obst.prn = prn;
+        //                 obsData.obs.push_back(obst);
+        //                 nsatValid++;
+        //             }
+        //         }
+
+        //         obsData.nsat = nsatValid;
+        //         obsData.flag = flag;
+        //     }
+
+        //     SortGNSSObs_IPSStruct(&obsData);
+        //     obsData.pubtime = obsData.gt.GPSWeek * 604800 + obsData.gt.secsOfWeek + obsData.gt.fracOfSec;
+        //     gnss_obsdata.push_back(obsData);
+
+        //     // FIXME: output information to debug
+        //     if (1 && obsData.pubtime > 2281 * 604800 + 97316)
+        //     {
+        //         std::string filename = "/home/leiwh/Research/Data/Others/20230925/log/DebugInfo_GNSSObs_datastreamio_Base.obs";
+        //         FILE *outfile = fopen(filename.c_str(), "a");
+        //         if (outfile != NULL)
+        //         {
+        //             Write_GNSSObsData_RINEXFormat(outfile, &obsData);
+        //             fclose(outfile);
+        //         }
+        //     }
+        // }
+
+        ///< 0. Open RINEX file
+        FILE *infile = fopen(rinex_infilepath, "rt");
+        if (!infile)
         {
-            printf("Fail to open rinex observation file!\n");
+            printf("Fail to open file %s to read.\n", rinex_infilepath);
             return false;
         }
 
-        // 2. Prepare variables
-        double dVal = 0;
-        const char sys_str[IPS_NSYS + 1] = {"GRCCEJ"};
-        char buff[IPS_MAXSIZE], *label = buff + 60, ch[128] = {'\0'};
-        int version = 0, prn = 0, sys = 0, sys_id = 0, GNSSTypeNum[IPS_NSYS] = {0};
+        ///< 1. Prepare variables
+        bool bflag = false;
         std::string timeSys = "GPS";
-        std::vector<std::string> GNSSType[IPS_NSYS];
-        std::map<std::string, double> PhaseShift[IPS_NSYS];
+        const char sys_str[NSYS + 1] = {"GRCCEJ"};
+        char buff[IPS_MAXSIZE] = {'\0'}, *label = buff + 60, ch[128] = {'\0'};
+        int SatSYS = IPS_SYSALL, flag = 0, nsat = 0;
+        int version = 0, prn = 0, sys = 0, sys_id = 0, GNSSTypeNum[NSYS] = {0};
+        int GPSObsPosX[4 * NFREQ] = {0}, GNSSObsPos[NSYS][4 * NFREQ] = {{0}};
         gnss_common::IPS_OBSHEAD obsHead;
-        int GNSSObsPos[IPS_NSYS][4 * NFREQ] = {{0}}; // P1,P2,P3,L1,L2,L5,D1,D2,D5,S1,S2,S5
-        int GPSObsPosX[4 * NFREQ] = {0};             // P1,P2,P3,L1,L2,L5,D1,D2,D5,S1,S2,S5
+        std::vector<std::string> GNSSType[NSYS], GNSSTypeRead[NSYS];
+        for (int i = 0; i < NSYS; i++)
+            GNSSTypeRead[i].resize(4 * NFREQ, "   ");
         std::string CodeType[4] = {"C", "L", "D", "S"};
-        std::string GNSSCodePris[IPS_NSYS][5] = {
+        std::string GNSSCodePris[NSYS][5] = {
             {"CPYWMNSLX", "PYWCMNDSLX", "IQX", "", ""}, // GPS
             {"PC", "PC", "IQX", "", ""},                // GLO
             {"IQX", "IQX", "IQXA", "", ""},             // BD2
@@ -608,7 +1061,7 @@ namespace dataio_common
             {"CABXZ", "IQX", "IQX", "IQX", "ABCXZ"},    // GAL
             {"CSLXZ", "SLX", "IQXDPZ", "SLXEZ", ""},    // QZS
         };
-        std::string GNSSCodeFreq[IPS_NSYS][5] = {
+        std::string GNSSCodeFreq[NSYS][5] = {
             {"1", "2", "5", " ", " "}, // GPS
             {"1", "2", "3", " ", " "}, // GLO
             {"2", "7", "6", " ", " "}, // BD2
@@ -616,66 +1069,9 @@ namespace dataio_common
             {"1", "5", "7", "8", "6"}, // GAL
             {"1", "2", "5", "6", " "}, // QZS
         };
-        std::vector<std::string> GNSSTypeRead[IPS_NSYS];
-        for (int i = 0; i < IPS_NSYS; i++)
-        {
-            GNSSTypeRead[i].resize(4 * NFREQ, "   ");
-        }
 
-        // switch the gnss frequency
-        if (gnss_common::gs_bSwitchGNSSFrq)
-        {
-            for (int f = 0; f < NFREQ; f++)
-            {
-                if (gnss_common::gs_strBD2Frq[f] == "B1I")
-                {
-                    GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
-                    GNSSCodeFreq[IPS_ISYSBD2][f] = "2";
-                }
-                else if (gnss_common::gs_strBD2Frq[f] == "B2I")
-                {
-                    GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
-                    GNSSCodeFreq[IPS_ISYSBD2][f] = "7";
-                }
-                else if (gnss_common::gs_strBD2Frq[f] == "B3I")
-                {
-                    GNSSCodePris[IPS_ISYSBD2][f] = "IQXA";
-                    GNSSCodeFreq[IPS_ISYSBD2][f] = "6";
-                }
-            }
-
-            for (int f = 0; f < NFREQ; f++)
-            {
-                if (gnss_common::gs_strBD3Frq[f] == "B1I")
-                {
-                    GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
-                    GNSSCodeFreq[IPS_ISYSBD3][f] = "2";
-                }
-                else if (gnss_common::gs_strBD3Frq[f] == "B2I" || gnss_common::gs_strBD3Frq[f] == "B2b")
-                {
-                    GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
-                    GNSSCodeFreq[IPS_ISYSBD3][f] = "7";
-                }
-                else if (gnss_common::gs_strBD3Frq[f] == "B3I")
-                {
-                    GNSSCodePris[IPS_ISYSBD3][f] = "IQXA";
-                    GNSSCodeFreq[IPS_ISYSBD3][f] = "6";
-                }
-                else if (gnss_common::gs_strBD3Frq[f] == "B1C")
-                {
-                    GNSSCodePris[IPS_ISYSBD3][f] = "DPXA";
-                    GNSSCodeFreq[IPS_ISYSBD3][f] = "1";
-                }
-                else if (gnss_common::gs_strBD3Frq[f] == "B2a")
-                {
-                    GNSSCodePris[IPS_ISYSBD3][f] = "DPX";
-                    GNSSCodeFreq[IPS_ISYSBD3][f] = "5";
-                }
-            }
-        }
-
-        // 3. Read the header info
-        while (fgets(buff, IPS_MAXSIZE, ifp))
+        ///< 2. Read RINEX header
+        while (fgets(buff, IPS_MAXSIZE, infile))
         {
             if (strstr(label, "RINEX VERSION / TYPE"))
             {
@@ -706,7 +1102,7 @@ namespace dataio_common
             {
                 sys_id = -1;
 
-                for (int k = 0; k < IPS_NSYS; k++)
+                for (int k = 0; k < NSYS; k++)
                 {
                     if (buff[0] == sys_str[k])
                     {
@@ -724,11 +1120,10 @@ namespace dataio_common
                 {
                     if (j > 58)
                     {
-                        if (!fgets(buff, IPS_MAXSIZE, ifp))
+                        if (!fgets(buff, IPS_MAXSIZE, infile))
                             return false;
                         j = 7;
                     }
-
                     xstrmid(buff, j, 3, ch);
 
                     if (buff[0] == 'C' && (ch[2] == 'I' || ch[2] == 'Q') && ch[1] == '1')
@@ -737,6 +1132,7 @@ namespace dataio_common
                     GNSSType[sys_id].push_back(std::string(ch));
                 }
 
+                // set BD2 and BD3 to be the same
                 if (sys_id == IPS_ISYSBD2)
                 {
                     GNSSTypeNum[IPS_ISYSBD3] = GNSSTypeNum[IPS_ISYSBD2];
@@ -747,7 +1143,7 @@ namespace dataio_common
             {
                 sys_id = -1;
 
-                for (int k = 0; k < IPS_NSYS; k++)
+                for (int k = 0; k < NSYS; k++)
                 {
                     if (buff[0] == sys_str[k])
                     {
@@ -758,15 +1154,6 @@ namespace dataio_common
 
                 if (sys_id < 0)
                     continue;
-
-                xstrmid(buff, 2, 3, ch);
-                dVal = str2num(buff, 6, 8);
-                PhaseShift[sys_id][std::string(ch)] = dVal;
-
-                if (sys_id == IPS_ISYSBD2)
-                {
-                    PhaseShift[IPS_ISYSBD3][std::string(ch)] = dVal;
-                }
             }
             else if (strstr(label, "INTERVAL"))
             {
@@ -789,16 +1176,175 @@ namespace dataio_common
             printf("RINEX VERSION is not 3.0!\n");
             return false;
         }
-
         if (timeSys != std::string("GPS"))
         {
-            printf("Time system is not GPS!\n");
+            printf("time is not GPS!\n");
             return false;
         }
 
-        bool bflag = false;
+        ///< 3. Detetmine the frequency and channel
+        // 3.1 switch the frequency and channel
+        if (gnss_common::gs_bSwitchGNSSFrq)
+        {
+            // GPS
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strGPSFrq[f] == "L1")
+                {
+                    GNSSCodePris[IPS_ISYSGPS][f] = "CPYWMNSLX";
+                    GNSSCodeFreq[IPS_ISYSGPS][f] = "1";
+                }
+                else if (gnss_common::gs_strGPSFrq[f] == "L2")
+                {
+                    // NOTE: The UBX 2S frequency often lacks data, so swap the order of S and L.
+                    GNSSCodePris[IPS_ISYSGPS][f] = "PYWCMNDLSX";
+                    GNSSCodeFreq[IPS_ISYSGPS][f] = "2";
+                }
+                else if (gnss_common::gs_strGPSFrq[f] == "L5")
+                {
+                    GNSSCodePris[IPS_ISYSGPS][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSGPS][f] = "5";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSGPS][f] = "";
+                    GNSSCodeFreq[IPS_ISYSGPS][f] = "";
+                }
+            }
+            // GLO
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strGLOFrq[f] == "G1")
+                {
+                    GNSSCodePris[IPS_ISYSGLO][f] = "PC";
+                    GNSSCodeFreq[IPS_ISYSGLO][f] = "1";
+                }
+                else if (gnss_common::gs_strGLOFrq[f] == "G2")
+                {
+                    GNSSCodePris[IPS_ISYSGLO][f] = "PC";
+                    GNSSCodeFreq[IPS_ISYSGLO][f] = "2";
+                }
+                else if (gnss_common::gs_strGLOFrq[f] == "G3")
+                {
+                    GNSSCodePris[IPS_ISYSGLO][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSGLO][f] = "3";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSGLO][f] = "";
+                    GNSSCodeFreq[IPS_ISYSGLO][f] = "";
+                }
+            }
+            // BD2
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strBD2Frq[f] == "B1I")
+                {
+                    GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSBD2][f] = "2";
+                }
+                else if (gnss_common::gs_strBD2Frq[f] == "B2I")
+                {
+                    GNSSCodePris[IPS_ISYSBD2][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSBD2][f] = "7";
+                }
+                else if (gnss_common::gs_strBD2Frq[f] == "B3I")
+                {
+                    GNSSCodePris[IPS_ISYSBD2][f] = "IQXA";
+                    GNSSCodeFreq[IPS_ISYSBD2][f] = "6";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSBD2][f] = "";
+                    GNSSCodeFreq[IPS_ISYSBD2][f] = "";
+                }
+            }
+            // BD3
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strBD3Frq[f] == "B1I")
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "2";
+                }
+                else if (gnss_common::gs_strBD3Frq[f] == "B2I" || gnss_common::gs_strBD3Frq[f] == "B2b")
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "7";
+                }
+                else if (gnss_common::gs_strBD3Frq[f] == "B3I")
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "IQXA";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "6";
+                }
+                else if (gnss_common::gs_strBD3Frq[f] == "B1C")
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "DPX";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "1";
+                }
+                else if (gnss_common::gs_strBD3Frq[f] == "B2a")
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "PIQX";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "5";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSBD3][f] = "";
+                    GNSSCodeFreq[IPS_ISYSBD3][f] = "";
+                }
+            }
+            // GAL
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strGALFrq[f] == "E1")
+                {
+                    GNSSCodePris[IPS_ISYSGAL][f] = "CABXZ";
+                    GNSSCodeFreq[IPS_ISYSGAL][f] = "1";
+                }
+                else if (gnss_common::gs_strGALFrq[f] == "E5a")
+                {
+                    GNSSCodePris[IPS_ISYSGAL][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSGAL][f] = "5";
+                }
+                else if (gnss_common::gs_strGALFrq[f] == "E5b")
+                {
+                    GNSSCodePris[IPS_ISYSGAL][f] = "IQX";
+                    GNSSCodeFreq[IPS_ISYSGAL][f] = "7";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSGAL][f] = "";
+                    GNSSCodeFreq[IPS_ISYSGAL][f] = "";
+                }
+            }
+            // QZS
+            for (int f = 0; f < NFREQ; f++)
+            {
+                if (gnss_common::gs_strQZSFrq[f] == "L1")
+                {
+                    GNSSCodePris[IPS_ISYSQZS][f] = "CSLXZ";
+                    GNSSCodeFreq[IPS_ISYSQZS][f] = "1";
+                }
+                else if (gnss_common::gs_strQZSFrq[f] == "L2")
+                {
+                    GNSSCodePris[IPS_ISYSQZS][f] = "SLX";
+                    GNSSCodeFreq[IPS_ISYSQZS][f] = "2";
+                }
+                else if (gnss_common::gs_strQZSFrq[f] == "L5")
+                {
+                    GNSSCodePris[IPS_ISYSQZS][f] = "IQXDPZ";
+                    GNSSCodeFreq[IPS_ISYSQZS][f] = "5";
+                }
+                else
+                {
+                    GNSSCodePris[IPS_ISYSQZS][f] = "";
+                    GNSSCodeFreq[IPS_ISYSQZS][f] = "";
+                }
+            }
+        }
 
-        for (sys_id = 0; sys_id < IPS_NSYS; sys_id++)
+        // 3.2 get the position of frequency and channel in the RINEX file
+        for (sys_id = 0; sys_id < NSYS; sys_id++)
         {
             for (int ncode = 0; ncode < 4; ncode++)
             {
@@ -806,6 +1352,7 @@ namespace dataio_common
                 {
                     bflag = false;
 
+                    // get the position for GPS X channel
                     if (sys_id == 0)
                     {
                         std::string code = CodeType[ncode] + GNSSCodeFreq[sys_id][frq] + "X";
@@ -819,6 +1366,7 @@ namespace dataio_common
                         }
                     }
 
+                    // get the observation for other systems
                     for (int i = 0; i < (int)GNSSCodePris[sys_id][frq].size(); i++)
                     {
                         std::string code = CodeType[ncode] + GNSSCodeFreq[sys_id][frq] + GNSSCodePris[sys_id][frq][i];
@@ -841,176 +1389,153 @@ namespace dataio_common
             }
         }
 
-        double PhaseShiftCorr[IPS_NSYS][NFREQ] = {0.0};
-        double PhaseShiftCorrX[NFREQ] = {0.0};
-        for (int i = 0; i < IPS_NSYS; i++)
+        ///< 4. Read RINEX body
+        while (!feof(infile))
         {
-            for (int j = 0; j < NFREQ; j++)
-            {
-                PhaseShiftCorr[i][j] = PhaseShift[i][GNSSTypeRead[i][NFREQ + j]];
-            }
-        }
-        PhaseShiftCorrX[0] = -PhaseShift[0]["L1X"];
-        PhaseShiftCorrX[1] = -PhaseShift[0]["L2X"];
-        PhaseShiftCorrX[2] = -PhaseShift[0]["L5X"];
+            // clear old data
+            memset(buff, '\0', IPS_MAXSIZE);
+            fgets(buff, IPS_MAXSIZE, infile);
 
-        /// 4. Read the body info
-        int SatSYS = IPS_SYSALL;
-        int flag = 0; // event flag
-        int nsat = 0; // satellite number
-
-        // read the observation data in each epoch
-        while (fgets(buff, IPS_MAXSIZE, ifp))
-        {
-            if (feof(ifp))
-                break;
+            if (buff[0] != '>')
+                continue;
 
             gnss_common::IPS_OBSDATA obsData;
 
-            /* decode obs epoch */
+            // get satnum
+            nsat = (int)str2num(buff, 32, 3);
+            if (nsat <= 0)
+                continue;
+
+            // get GPS time
+            flag = (int)str2num(buff, 31, 1);
+            if (3 <= flag && flag <= 5)
             {
-                if (buff[0] != '>')
+                for (int p = 0; p < nsat; p++)
+                    fgets(buff, IPS_MAXSIZE, infile);
+                continue;
+            }
+            obsData.gt = gnss_common::str2time(buff, 1, 28);
+
+            // get each valid satellite
+            int nsatValid = 0;
+            for (int i = 0; i < nsat; i++)
+            {
+                memset(buff, '\0', IPS_MAXSIZE);
+                fgets(buff, IPS_MAXSIZE, infile);
+
+                gnss_common::IPS_OBSDATA_t obst;
+                xstrmid(buff, 0, 3, ch);
+                prn = gnss_common::satno2prn(ch);
+                if (prn == 0)
                     continue;
 
-                /* epoch flag: 3:new site,4:header info,5:external event */
-                nsat = (int)str2num(buff, 32, 3);
-                if (nsat <= 0)
-                    continue;
+                bool bpush = false;
+                sys = IPS_SYSNON;
+                gnss_common::satprn2no(prn, &sys);
+                sys_id = gnss_common::Sys2Index(sys);
 
-                flag = (int)str2num(buff, 31, 1);
-                if (3 <= flag && flag <= 5)
+                if (SatSYS & sys)
                 {
-                    // 3-5 represents the time info
-                    for (int p = 0; p < nsat; p++)
-                        fgets(buff, IPS_MAXSIZE, ifp);
-                    continue;
-                }
-
-                obsData.gt = gnss_common::str2time(buff, 1, 28);
-
-                int nsatValid = 0; // the number of available satellites
-
-                for (int i = 0; i < nsat; i++)
-                {
-                    gnss_common::IPS_OBSDATA_t obst;
-
-                    fgets(buff, IPS_MAXSIZE, ifp);
-
-                    xstrmid(buff, 0, 3, ch);
-                    prn = gnss_common::satno2prn(ch);
-                    if (prn == 0)
-                        continue;
-
-                    sys = IPS_SYSNON;
-                    gnss_common::satprn2no(prn, &sys);
-
-                    bool bpush = false;
-
-                    sys_id = gnss_common::Sys2Index(sys);
-
-                    if (SatSYS & sys)
+                    bpush = true;
+                    int pos = 0;
+                    for (int k = 0; k < NFREQ; k++)
                     {
-                        bpush = true;
-                        int pos = 0;
-                        for (int k = 0; k < NFREQ; k++)
-                        {
-                            bool bX = false;
+                        bool bX = false;
 
-                            // L
-                            pos = GNSSObsPos[sys_id][NFREQ + k];
+                        // L
+                        pos = GNSSObsPos[sys_id][NFREQ + k];
+                        if (pos > 0)
+                        {
+                            pos--;
+                            obst.L[k] = str2num(buff, 3 + 16 * pos, 14);
+                            obst.LLI[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 14, 1);
+                            obst.SNR[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 15, 1);
+
+                            // NOTE: If the W channel is 0, then activate the X channel.
+                            bX = (sys == IPS_SYSGPS && obst.L[k] == 0.0 && GNSSTypeRead[sys_id][NFREQ + k][2] == 'W');
+                        }
+                        if (bX)
+                        {
+                            pos = GPSObsPosX[NFREQ + k];
                             if (pos > 0)
                             {
                                 pos--;
                                 obst.L[k] = str2num(buff, 3 + 16 * pos, 14);
                                 obst.LLI[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 14, 1);
                                 obst.SNR[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 15, 1);
-                                if (obst.L[k] != 0.0)
-                                    obst.L[k] += PhaseShiftCorr[0][k];
-
-                                bX = (sys == IPS_SYSGPS && obst.L[k] == 0.0 && GNSSTypeRead[sys_id][NFREQ + k][2] == 'W');
                             }
 
-                            if (bX)
-                            {
-                                pos = GPSObsPosX[NFREQ + k];
-                                if (pos > 0)
-                                {
-                                    pos--;
-                                    obst.L[k] = str2num(buff, 3 + 16 * pos, 14);
-                                    obst.LLI[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 14, 1);
-                                    obst.SNR[k] = (unsigned char)str2num(buff, 3 + 16 * pos + 15, 1);
-                                    if (obst.L[k] != 0.0)
-                                        obst.L[k] += PhaseShiftCorrX[k];
-                                }
-
-                                // P
-                                pos = GPSObsPosX[k];
-                                if (pos > 0)
-                                {
-                                    pos--;
-                                    obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
-                                }
-                                obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
-                                obst.code[k][1] = 'X';
-
-                                // S
-                                pos = GPSObsPosX[NFREQ * 3 + k];
-                                if (pos > 0)
-                                {
-                                    pos--;
-                                    obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
-                                }
-                            }
-
-                            if (obst.P[k] == 0.0)
-                            {
-                                pos = GNSSObsPos[sys_id][k];
-                                if (pos > 0)
-                                {
-                                    pos--;
-                                    obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
-                                }
-                                obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
-                                obst.code[k][1] = GNSSTypeRead[sys_id][k][2];
-                            }
-
-                            // S
-                            if (obst.S[k] == 0.0)
-                            {
-                                pos = GNSSObsPos[sys_id][NFREQ * 3 + k];
-                                if (pos > 0)
-                                {
-                                    pos--;
-                                    obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
-                                }
-                            }
-
-                            // D
-                            pos = GNSSObsPos[sys_id][NFREQ * 2 + k];
+                            // P
+                            pos = GPSObsPosX[k];
                             if (pos > 0)
                             {
                                 pos--;
-                                obst.D[k] = str2num(buff, 3 + 16 * pos, 14);
+                                obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
+                            }
+                            obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
+                            obst.code[k][1] = 'X';
+
+                            // S
+                            pos = GPSObsPosX[NFREQ * 3 + k];
+                            if (pos > 0)
+                            {
+                                pos--;
+                                obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
                             }
                         }
-                    }
 
-                    if (bpush)
-                    {
-                        obst.prn = prn;
-                        obsData.obs.push_back(obst);
-                        nsatValid++;
+                        // P
+                        // NOTE: If no value or the X channel is 0, then use the original channel.
+                        if (obst.P[k] == 0.0)
+                        {
+                            pos = GNSSObsPos[sys_id][k];
+                            if (pos > 0)
+                            {
+                                pos--;
+                                obst.P[k] = str2num(buff, 3 + 16 * pos, 14);
+                            }
+                            obst.code[k][0] = GNSSTypeRead[sys_id][k][1];
+                            obst.code[k][1] = GNSSTypeRead[sys_id][k][2];
+                        }
+
+                        // S
+                        if (obst.S[k] == 0.0)
+                        {
+                            pos = GNSSObsPos[sys_id][NFREQ * 3 + k];
+                            if (pos > 0)
+                            {
+                                pos--;
+                                obst.S[k] = (float)str2num(buff, 3 + 16 * pos, 14);
+                            }
+                        }
+
+                        // D
+                        pos = GNSSObsPos[sys_id][NFREQ * 2 + k];
+                        if (pos > 0)
+                        {
+                            pos--;
+                            obst.D[k] = str2num(buff, 3 + 16 * pos, 14);
+                        }
                     }
                 }
 
-                obsData.nsat = nsatValid;
-                obsData.flag = flag;
+                if (bpush)
+                {
+                    obst.prn = prn;
+                    obsData.obs.push_back(obst);
+                    nsatValid++;
+                }
             }
+            obsData.nsat = nsatValid;
+            obsData.flag = flag;
 
+            // sort and store each observation
             SortGNSSObs_IPSStruct(&obsData);
             obsData.pubtime = obsData.gt.GPSWeek * 604800 + obsData.gt.secsOfWeek + obsData.gt.fracOfSec;
             gnss_obsdata.push_back(obsData);
         }
+
+        fclose(infile);
 
         return true;
     }
@@ -1280,8 +1805,9 @@ namespace dataio_common
                 BDSEph.toe = bdst2gpst(BDSEph.toe);
                 BDSEph.ttr = bdst2gpst(BDSEph.ttr);
 
+                // FIXME: add codes to debug
                 // NOTE: convert BDS toes to GPS toes
-                BDSEph.toes += 14.0;
+                // BDSEph.toes += 14.0;
 
                 gnss_ephdata.push_back(BDSEph);
             }
@@ -1351,8 +1877,9 @@ namespace dataio_common
                 BDSEph.toe = bdst2gpst(BDSEph.toe);
                 BDSEph.ttr = bdst2gpst(BDSEph.ttr);
 
+                // FIXME: add codes to debug
                 // NOTE: convert BDS toes to GPS toes
-                BDSEph.toes += 14.0;
+                // BDSEph.toes += 14.0;
 
                 gnss_ephdata.push_back(BDSEph);
             }
@@ -1498,17 +2025,18 @@ namespace dataio_common
         // Rember to close the file
         fclose(infile);
 
+        // FIXME: NEED TO DELETE
         // 4. Preprocess
         // 4.1 sort the ephemeirs data according to the toe (not toes)
         // NOTE: The toe has been converted to GPS time for BDS
-        gnss_ephdata.sort([](const gnss_common::IPS_GPSEPH &a, const gnss_common::IPS_GPSEPH &b)
-                          { return a.toe.GPSWeek * 604800.0 + a.toe.secsOfWeek + a.toe.fracOfSec < b.toe.GPSWeek * 604800.0 + b.toe.secsOfWeek + b.toe.fracOfSec; });
+        // gnss_ephdata.sort([](const gnss_common::IPS_GPSEPH &a, const gnss_common::IPS_GPSEPH &b)
+        //                   { return a.toe.GPSWeek * 604800.0 + a.toe.secsOfWeek + a.toe.fracOfSec < b.toe.GPSWeek * 604800.0 + b.toe.secsOfWeek + b.toe.fracOfSec; });
 
         return true;
     }
 
     /**
-     * @brief       The main function to extract GNSS solution data from bag file
+     * @brief       Extract GNSS solution data from bag file
      * @note
      *
      * @param[in]   char*           bagfile              bag filepath
@@ -1520,7 +2048,7 @@ namespace dataio_common
      * @return      bool      true      extract successfully
      *                        false     fail to extract
      */
-    extern bool Extract_GNSSSolution_ROSBag_MAIN(const char *bagfile, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys)
+    extern bool Extract_GNSSSolution_ROSBag(const char *bagfile, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys)
     {
         // 1. Open the bag file to read GNSS solution data
         rosbag::Bag bag_in;
@@ -1609,7 +2137,7 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract GNSS solution data as VisonRTK 02 Format
+     * @brief       Extract GNSS solution data from rosbag file as VisonRTK 02 Format
      * @note
      *
      * @param[in]   MessageInstance      msg          ros message
@@ -1630,27 +2158,25 @@ namespace dataio_common
             if (timesys == dataio_common::timesystem::Linux_time)
                 onedata.pubtime = onedata.pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
-            // match timestamp
+            // timestamp
+            // NOTE: The timestamp is used to match with IMU data in processing
             onedata.timestamp = sol_msg->time_gps_wno * 604800.0 + sol_msg->time_gps_tow;
 
-            // LLH
+            // position
             onedata.position_LLH[0] = sol_msg->pos_lat * IPS_D2R;
             onedata.position_LLH[1] = sol_msg->pos_lon * IPS_D2R;
             onedata.position_LLH[2] = sol_msg->pos_height;
+            gnss_common::LLH2XYZ(onedata.position_LLH, onedata.position_XYZ);
 
             // position covariance
-            onedata.position_acch = sol_msg->pos_acc_h;
-            onedata.position_accv = sol_msg->pos_acc_v;
-
-            // ENU
-            onedata.position_ENU[0] = sol_msg->rel_pos_e;
-            onedata.position_ENU[1] = sol_msg->rel_pos_n;
-            onedata.position_ENU[2] = -sol_msg->rel_pos_d;
-
-            // ENU covariance
-            onedata.position_acce = sol_msg->rel_acc_e;
-            onedata.position_accn = sol_msg->rel_acc_n;
-            onedata.position_accu = sol_msg->rel_acc_d;
+            // NOTE: For VisionRTK-02 format, the covariance is converted from ENU to XYZ
+            Eigen::Matrix3d ENUCov = Eigen::Matrix3d::Zero();
+            ENUCov(0, 0) = pow(onedata.position_acch, 2) / 2.0;
+            ENUCov(1, 1) = pow(onedata.position_acch, 2) / 2.0;
+            ENUCov(2, 2) = pow(onedata.position_accv, 2);
+            Eigen::Matrix3d R_eTon = gnss_common::ComputeRotMat_ENU2ECEF(onedata.position_LLH[0], onedata.position_LLH[1]);
+            Eigen::Matrix3d XYZCov = (R_eTon.transpose()) * ENUCov * R_eTon;
+            EigenMatrix2Array(XYZCov, onedata.positioncov_XYZ);
         }
     }
 

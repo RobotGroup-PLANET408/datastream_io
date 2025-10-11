@@ -6,11 +6,6 @@
 #
 ########################################################################################################################
 
-# Timestamp
-# NOTE: the header timstamp is used to publish data
-#       and will not be used in GNSS data process
-Header header
-
 # Satellite PRN
 uint32 prn
 

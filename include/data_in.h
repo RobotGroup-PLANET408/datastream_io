@@ -37,7 +37,7 @@ namespace dataio_common
      * @brief       Extract GNSS solution data
      */
     ///< Bag file
-    extern bool Extract_GNSSSolution_ROSBag_MAIN(const char *infilepath, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys);
+    extern bool Extract_GNSSSolution_ROSBag(const char *infilepath, std::list<Solution_GNSS> &soldatas, const std::string &topic, dataformat datatype, const dataio_common::timesystem timesys);
     extern void Extract_GNSSSolution_VisionRTK01_ROSBag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys);
     extern void Extract_GNSSSolution_VisionRTK02_ROSBag(const rosbag::MessageInstance &msg, Solution_GNSS &onedata, const dataio_common::timesystem timesys);
     ///< Txt file

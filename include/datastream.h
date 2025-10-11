@@ -48,6 +48,7 @@
 #include <RobotGVINS_GNSSSat.h>
 #include <RobotGVINS_GNSSObs.h>
 #include <RobotGVINS_GNSSEph.h>
+#include <RobotGVINS_GNSSNav.h>
 #include <RobotGVINS_GTINSSol.h>
 #include <GVINS_GNSSMeasMsg.h>
 #include <GVINS_GNSSObsMsg.h>
@@ -184,7 +185,7 @@ namespace dataio_common
         int gps_week;              // GPS week
         double gps_second;         // GPS second (s)
         double timestamp;          // GPS timestamp (s)
-        double pubtime;            // publish timestamp (s)
+        double pubtime;            // publish timestamp (s) // FIXME: NEED TO DELETE
         double position_XYZ[3];    // ECEF(m)
         double position_ENU[3];    // ENU(m)
         double position_LLH[3];    // BLH(rad/rad/m)

@@ -2,14 +2,15 @@
 ---
 
 # Data filepath
-Output_Filepath: "/home/leiwh/Research/Data/Fixposition/20240524/2024-05-24-03-41-46_maximal/rosbag"                             # The filepath to output converted rosbag
-ROSBag_FilePath: "/media/leiwh/WD_BLACK/01_Dataset/01_RobotGroup/01_Fixposition/2024-05-24/2024-05-24-03-41-46_maximal/rosbag"   # The filepath to extract raw rosbag
+Output_Filepath: "/home/leiwh/Research/Document/Paper_SRKF/Data/2023-09-25-03-01-32_maximal/rosbag"           # The filepath to output converted rosbag
+ROSBag_FilePath: "/home/leiwh/Research/Document/Paper02/Version-02/Data/2023-09-25-03-01-32_maximal/rosbag"   # The filepath to extract raw rosbag
 ROSBag_FileName: 
-  - vrtk_6d9d0a_maximal_2024-05-24-03-41-46_0.bag
-  - vrtk_6d9d0a_maximal_2024-05-24-03-41-46_1.bag
-GNSSBaseObs_FilePath: "/media/leiwh/WD_BLACK/01_Dataset/01_RobotGroup/01_Fixposition/2024-05-24/BaseStation/IGS000USA_R_20241450000_01D_01S_MO.rnx"  # The filepath to read ground truth
-GNSSBaseEph_FilePath: "/media/leiwh/WD_BLACK/01_Dataset/01_RobotGroup/01_Fixposition/2024-05-24/BaseStation/IGS000USA_R_20241450000_01D_01S_MN.rnx"  # The filepath to output result
-GNSSolution_FilePath: "/home/leiwh/Research/Data/Fixposition/20240524/2024-05-24-03-41-46_maximal/R_RTK/gnss_data_1.pos"                      # The filepath to output log information
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_0.bag
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_1.bag
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_2.bag
+GNSSBaseObs_FilePath: "/home/leiwh/Research/Document/MasterThesis/Example_05/Data/2023-09-25-03-01-32_maximal/gnss-sins/IGS000USA_R_20232680000_01D_01S_MO.rnx"  # The filepath to read ground truth
+GNSSBaseEph_FilePath: "/home/leiwh/Research/Document/MasterThesis/Example_05/Data/2023-09-25-03-01-32_maximal/gnss-sins/IGS000USA_R_20232680000_01D_01S_MN.rnx"  # The filepath to output result
+GNSSolution_FilePath: "/home/leiwh/Research/Document/Paper02/Version-02/Data/2023-09-25-03-01-32_maximal/result/ForPaper02/R_RTK/gnss_data_1.pos"    # The filepath to output log information
 
 # ROS topic before convertion
 Imu_Topic_Input: "/imu/data"                                   # Imu data topic
@@ -22,8 +23,8 @@ Imu_Topic_Output: "/imu/data"                                  # Imu data topic
 Image_Topic_Output: "/image/data"                              # Image data topic
 GNSSRoveObs_Topic_Output: "/gnss/obs/rove"                     # The GNSS observation data topic [rove station, base station]
 GNSSBaseObs_Topic_Output: "/gnss/obs/base"                     # The GNSS observation data topic [rove station, base station]
-GNSSRoveEph_Topic_Output: "/gnss/eph/rove"                     # The GNSS ephemeris data topic [rove station, base station]
-GNSSBaseEph_Topic_Output: "/gnss/eph/base"                     # The GNSS ephemeris data topic [rove station, base station]
+GNSSRoveEph_Topic_Output: "/gnss/nav/rove"                     # The GNSS ephemeris data topic [rove station, base station]
+GNSSBaseEph_Topic_Output: "/gnss/nav/base"                     # The GNSS ephemeris data topic [rove station, base station]
 GNSSSol_Topic_Output: "/gnss/solution"                         # The GNSS solution data topic
 
 # Data format
