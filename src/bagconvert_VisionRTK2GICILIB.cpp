@@ -70,11 +70,6 @@ int main(int argc, char **argv)
             if (dataio_common::Extract_IMUdata_ROSBag(bag_infilepath.c_str(), config.imu_topic_input, imudatas, dataio_common::Linux_time) == false)
                 return false;
 
-            // FIXME: NEED TO DELETE
-            // // step 2: write imu data to bag file
-            // if (dataio_common::Write_IMUdata_ROSBag(bag_outfilepath.c_str(), config.imu_topic_output, imudatas, 1) == false)
-            //     return false;
-
             // step 2: write imu data to bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.imu_topic_output, "", imudatas, 1, false) == false)
             {
@@ -92,12 +87,6 @@ int main(int argc, char **argv)
             std::list<sensor_msgs::Image> imagedatas(0);
             if (dataio_common::Extract_ImageData_ROSBag(bag_infilepath.c_str(), config.image_topic_input, imagedatas, dataio_common::Linux_time) == false)
                 return false;
-
-            // FIXME: NEED TO DELETE
-            // step 2: write image data to bag file
-            // if (dataio_common::Write_ImageData_ROSBag(bag_outfilepath.c_str(), config.image_topic_output, imagedatas, 2) == false)
-            //     return false;
-            // FIXME: NEED TO DELETE
 
             // step 2: write image data to bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.image_topic_output, config.imu_topic_output, imagedatas, 2, true) == false)

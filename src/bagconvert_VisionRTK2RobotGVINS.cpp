@@ -32,7 +32,7 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    ///< 2. Extract, convert and write each rosbag
+    ///< 3. Extract, convert and write each rosbag
     for (int i = 0; i < config.rosbag_filename.size(); i++)
     {
         // Get filepath
@@ -72,11 +72,6 @@ int main(int argc, char **argv)
                 return 0;
             }
 
-            // FIXME: NEED TO DELETE
-            // // step 2: write imu data to bag file
-            // if (dataio_common::Write_IMUdata_ROSBag(bag_outfilepath.c_str(), config.imu_topic_output, imudatas, 1) == false)
-            //     return false;
-
             // step 2: write imu data to bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.imu_topic_output, "", imudatas, 1, false) == false)
             {
@@ -98,11 +93,6 @@ int main(int argc, char **argv)
                 return 0;
             }
 
-            // FIXME: NEED TO DELETE
-            // // step 2: write image data to bag file
-            // if (dataio_common::Write_ImageData_ROSBag(bag_outfilepath.c_str(), config.image_topic_output, imagedatas, 2) == false)
-            //     return false;
-
             // step 2: write image data to bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.image_topic_output, config.imu_topic_output, imagedatas, 2, true) == false)
             {
@@ -111,7 +101,7 @@ int main(int argc, char **argv)
             }
         }
 
-        // (3) Extract and write gnss raw data (rove observation and ephemeirs)
+        // (3) Extract and write gnss raw data (VisionRTK format 01)
         if (bag_infilepath != "\0" && topics_output.find(config.gnssroveobs_topic_output) == topics_output.end() && topics_output.find(config.gnssroveeph_topic_output) == topics_output.end())
         {
             ROS_INFO("  processing gnss raw data ...");
@@ -129,10 +119,6 @@ int main(int argc, char **argv)
             std::list<datastreamio::RobotGVINS_GNSSObs> robot_obsdata(0);
             std::list<datastreamio::RobotGVINS_GNSSEph> robot_ephdata(0);
 
-            // FIXME: NEED TO DELETE
-            // dataio_common::Convert_GNSSObsData_IPS2RobotGVINS(ips_obsdata, robot_obsdata);
-            // dataio_common::Convert_GNSSEphData_IPS2RobotGVINS(ips_ephdata, robot_ephdata);
-
             if (dataio_common::Convert_GNSSObsData_IPS2OtherFormat(ips_obsdata, robot_obsdata, dataio_common::dataformat::RobotGVINS_Format) == false)
             {
                 printf("Fail to convert GNSS rove observation data format.\n");
@@ -143,13 +129,6 @@ int main(int argc, char **argv)
                 printf("Fail to convert GNSS rove ephemeris data format.\n");
                 return false;
             }
-
-            // FIXME: NEED TO DELETE
-            // step 3: write GNSS raw data to bag file
-            // if (dataio_common::Write_GNSSObsData_RobotGVINSFormat(bag_outfilepath.c_str(), config.gnssroveobs_topic_output, config.imu_topic_output, robot_obsdata, 2) == false)
-            //     return false;
-            // if (dataio_common::Write_GNSSEphData_RobotGVINSFormat(bag_outfilepath.c_str(), config.gnssroveeph_topic_output, config.imu_topic_output, robot_ephdata, 2, true) == false)
-            //     return false;
 
             // step 3: bind ephemeirs data to publish
             ros::Time start_time(0.0), end_time(0.0);
@@ -178,7 +157,7 @@ int main(int argc, char **argv)
                 return 0;
         }
 
-        // (4) Extract and write GNSS solution data (VisionRTK format)
+        // (4) Extract and write GNSS solution data (VisionRTK format 01)
         if (bag_infilepath != "\0" && topics_output.find(config.gnsssol_topic_input) == topics_output.end())
         {
             ROS_INFO("  processing gnss solution data (VisionRTK) ...");
@@ -222,20 +201,11 @@ int main(int argc, char **argv)
 
             // step 2: convert GNSS observation data format
             std::list<datastreamio::RobotGVINS_GNSSObs> robot_baseobs(0);
-
-            // FIXME: NEED TO DELETE
-            // dataio_common::Convert_GNSSObsData_IPS2RobotGVINS(ips_baseobs, robot_baseobs);
-
             if (dataio_common::Convert_GNSSObsData_IPS2OtherFormat(ips_baseobs, robot_baseobs, dataio_common::dataformat::RobotGVINS_Format) == false)
             {
                 printf("Fail to convert GNSS base observation data format.\n");
                 return false;
             }
-
-            // FIXME: NEED TO DELETE
-            // // step 3: write GNSS obervation data to bag file
-            // if (dataio_common::Write_GNSSObsData_RobotGVINSFormat(bag_outfilepath.c_str(), config.gnssbaseobs_topic_output, config.imu_topic_output, robot_baseobs, 2) == false)
-            //     return false;
 
             // step 3: write GNSS obervation data to bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.gnssbaseobs_topic_output, config.imu_topic_output, robot_baseobs, 2, true) == false)
@@ -245,23 +215,6 @@ int main(int argc, char **argv)
             }
         }
 
-        // (6) Extract and write GNSS ephemeris data (base station)
-        // FIXME: NEED TO DELETE
-        // if (baseeph_infilepath != "\0" && topics_output.find(config.gnssbaseeph_topic_output) == topics_output.end())
-        // {
-        //     ROS_INFO("  processing gnss base ephemeris data ...");
-
-        //     // step 1: extract GNSS observation data from rinex file
-        //     std::list<gnss_common::IPS_GPSEPH> ips_baseeph(0);
-        //     if (dataio_common::Extract_GNSSEphData_RINEX3Format(baseeph_infilepath.c_str(), ips_baseeph) == false)
-        //         return false;
-        //     // step 2: convert GNSS ephemeirs data format
-        //     std::list<datastreamio::RobotGVINS_GNSSEph> robot_baseeph(0);
-        //     dataio_common::Convert_GNSSEphData_IPS2RobotGVINS(ips_baseeph, robot_baseeph);
-        //     // step 3: write GNSS ephemeris data to bag file
-        //     if (dataio_common::Write_GNSSEphData_RobotGVINSFormat(bag_outfilepath.c_str(), config.gnssbaseeph_topic_output, config.imu_topic_output, robot_baseeph, 2, false) == false)
-        //         return false;
-        // }
         if (baseeph_infilepath != "\0" && topics_output.find(config.gnssbaseeph_topic_output) == topics_output.end())
         {
             ROS_INFO("  processing gnss base ephemeris data ...");
@@ -330,10 +283,6 @@ int main(int argc, char **argv)
                 ROS_ERROR("Failed to convert GNSS solution data.");
                 return 0;
             }
-
-            // // step 2: write GNSS solution data from bag file
-            // if (dataio_common::Write_GNSSolution_ROSBag_MAIN(bag_outfilepath.c_str(), robot_soldatas, config.imu_topic_output, config.gnsssol_topic_output, config.format_output, 2) == false)
-            //     return false;
 
             // step 3: write GNSS solution data from bag file
             if (dataio_common::Write_ROSMessage_ROSBag(bag_outfilepath.c_str(), config.gnsssol_topic_output, config.imu_topic_output, robot_soldatas, 2, true) == false)
