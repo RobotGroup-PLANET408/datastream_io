@@ -25,6 +25,7 @@ namespace dataio_common
     ///< Bag file
     extern bool Extract_IMUdata_ROSBag(const char *bag_infilepath, const std::string &imu_topic, std::list<sensor_msgs::Imu> &imudatas, const dataio_common::timesystem timesys);
     ///< Txt file
+    extern bool Extract_IMUdata_IMRFile(const char *infilepath, const int GPSWeek, std::list<sensor_msgs::Imu> &imudatas);
     extern bool Extract_IMUdata_TXTFile(const char *infilepath, std::list<sensor_msgs::Imu> &imudatas, int infolines);
 
     /**

@@ -78,6 +78,16 @@ namespace gnss_common
 
 namespace gnss_common
 {
+    struct time_type
+    {
+        short int year;
+        short int month;
+        short int day;
+        short int hour;
+        short int minute;
+        short int second;
+    };
+
     struct IPS_YMDHMS
     {
         int year;

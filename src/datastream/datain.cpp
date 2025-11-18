@@ -243,6 +243,102 @@ namespace dataio_common
     }
 
     /**
+     * @brief       Extract imu data from imr file
+     * @note        1. The imu data format: GPSWeek GPSSecond Gyros-XYZ[rad/s] Accel-XYZ[m/s2]
+     *              2. If the input timesys is Linux, it should be convert to GPSTime
+     *              3. The GPS week should be provided in advance
+     *
+     * @param[in]   char*      bagfile       filepath
+     * @param[in]   int        GPSWeek       GPS week
+     * @param[out]  list       imudatas      all imu data
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+     */
+    extern bool Extract_IMUdata_IMRFile(const char *infilepath, const int GPSWeek, std::list<sensor_msgs::Imu> &imudatas)
+    {
+        if (GPSWeek <= 0)
+        {
+            ROS_ERROR("Fail to load GPS week.");
+            return false;
+        }
+
+        // 1. Open the imr file
+        FILE *infile = fopen(infilepath, "rb");
+        if (infile == NULL)
+        {
+            ROS_ERROR("Fail to open imr file: %s", infilepath);
+            return false;
+        }
+
+        // 2. Read header info
+        gnss_common::time_type tCreate;
+        bool bDirValid = false, bLeverArmValid = false;
+        unsigned char ucX = '\0', ucY = '\0', ucZ = '\0';
+        char szHeader[8] = {'\0'}, szImuName[32] = {'\0'}, Reserved[354] = {'\0'}, szProgramName = {'\0'}, bIsIntelOrMotorola = '\0';
+        int lXoffset = 0, lYoffset = 0, lZoffset = 0, bDeltaTheta = 0, bDeltaVelocity = 0, iUtcOrGpsTime = 0, iRcvTimeOrCorrTime = 0;
+        double dVersionNumber = 0.0, dDataRateHz = 0.0, dTimeTagBias = 0.0, dGyrosScaleFactor = 0.0, dAccelScaleFactor = 0.0;
+
+        fread(&szHeader, sizeof(char), 8, infile);
+        fread(&bIsIntelOrMotorola, sizeof(char), 1, infile);
+        fread(&dVersionNumber, sizeof(double), 1, infile);
+        fread(&bDeltaTheta, sizeof(int), 1, infile);
+        fread(&bDeltaVelocity, sizeof(int), 1, infile);
+        fread(&dDataRateHz, sizeof(double), 1, infile);
+        fread(&dGyrosScaleFactor, sizeof(double), 1, infile);
+        fread(&dAccelScaleFactor, sizeof(double), 1, infile);
+        fread(&iUtcOrGpsTime, sizeof(int), 1, infile);
+        fread(&iRcvTimeOrCorrTime, sizeof(int), 1, infile);
+        fread(&dTimeTagBias, sizeof(double), 1, infile);
+        fread(&szImuName, sizeof(char), 32, infile);
+        fread(&bDirValid, sizeof(bool), 1, infile);
+        fread(&ucX, sizeof(unsigned char), 1, infile);
+        fread(&ucY, sizeof(unsigned char), 1, infile);
+        fread(&ucZ, sizeof(unsigned char), 1, infile);
+        fread(&szProgramName, sizeof(char), 32, infile);
+        fread(&tCreate, sizeof(gnss_common::time_type), 1, infile);
+        fread(&bLeverArmValid, sizeof(bool), 1, infile);
+        fread(&lXoffset, sizeof(char), 4, infile);
+        fread(&lYoffset, sizeof(char), 4, infile);
+        fread(&lZoffset, sizeof(char), 4, infile);
+        fread(&Reserved, sizeof(bool), 354, infile);
+
+        // 3. Extract IMU data
+        while (!feof(infile))
+        {
+            // (1) get each data
+            double tow = 0.0;
+            int gx = 0, gy = 0, gz = 0, ax = 0, ay = 0, az = 0;
+            fread(&tow, sizeof(char), 8, infile);
+            fread(&gx, sizeof(char), 4, infile);
+            fread(&gy, sizeof(char), 4, infile);
+            fread(&gz, sizeof(char), 4, infile);
+            fread(&ax, sizeof(char), 4, infile);
+            fread(&ay, sizeof(char), 4, infile);
+            fread(&az, sizeof(char), 4, infile);
+
+            if (tow <= 0 || tow > 604800.0)
+                continue;
+
+            // (2) convert and store the imu data
+            // NOTE: The acce and gyro should be m/s2 and rad/s
+            sensor_msgs::Imu onedata;
+            onedata.header.stamp = ros::Time(GPSWeek * 604800.0 + tow);
+            onedata.angular_velocity.x = dDataRateHz * gx * dGyrosScaleFactor * D2R;
+            onedata.angular_velocity.y = dDataRateHz * gy * dGyrosScaleFactor * D2R;
+            onedata.angular_velocity.z = dDataRateHz * gz * dGyrosScaleFactor * D2R;
+            onedata.linear_acceleration.x = dDataRateHz * ax * dAccelScaleFactor;
+            onedata.linear_acceleration.y = dDataRateHz * ay * dAccelScaleFactor;
+            onedata.linear_acceleration.z = dDataRateHz * az * dAccelScaleFactor;
+            imudatas.push_back(onedata);
+        }
+
+        fclose(infile);
+
+        return true;
+    }
+
+    /**
      * @brief       Extract image data from bag file
      * @note        1. The image data should be ros standard format
      *              2. If the input timesys is Linux, it should be convert to GPSTime
@@ -448,9 +544,9 @@ namespace dataio_common
                 pubtime = pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
             // If need, write raw ublox format data
-            if (0)
+            if (1)
             {
-                std::ofstream outfile("/home/leiwh/Research/Data/Others/20230925/log/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                std::ofstream outfile("/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/rosbag/gnss_obs.ubx", std::ios::binary | std::ios::app);
                 outfile.write(reinterpret_cast<const char *>(gnss_msg->message.data.data()), gnss_msg->message.data.size());
                 outfile.close();
             }
@@ -524,6 +620,14 @@ namespace dataio_common
             double timestamp = gnss_msg->stamp.toSec();
             if (timesys == timesystem::Linux_time)
                 timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
+
+            // If need, write raw ublox format data
+            if (0)
+            {
+                std::ofstream outfile("/media/leiwh/T7/01_RobotGroup/02_Data/20251105/laptop/kinematic/test/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                outfile.write(reinterpret_cast<const char *>(gnss_msg->data.data()), gnss_msg->data.size());
+                outfile.close();
+            }
 
             // decode the raw data
             for (int i = 0; i < gnss_msg->data.size(); i++)

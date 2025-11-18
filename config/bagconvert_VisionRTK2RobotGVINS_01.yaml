@@ -2,15 +2,13 @@
 ---
 
 # Data filepath
-Output_Filepath: "/home/leiwh/Research/Document/Paper_SRKF/Data/2023-09-25-03-01-32_maximal/rosbag"           # The filepath to output converted rosbag
-ROSBag_FilePath: "/home/leiwh/Research/Document/Paper02/Version-02/Data/2023-09-25-03-01-32_maximal/rosbag"   # The filepath to extract raw rosbag
+Output_Filepath: "/home/leiwh/Research/Document/Paper_SRKF/Data/2022-12-13-03-28-21_maximal/rosbag"    # The filepath to output converted rosbag
+ROSBag_FilePath: "/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/rosbag"   # The filepath to extract raw rosbag
 ROSBag_FileName: 
-  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_0.bag
-  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_1.bag
-  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_2.bag
-GNSSBaseObs_FilePath: "/home/leiwh/Research/Document/MasterThesis/Example_05/Data/2023-09-25-03-01-32_maximal/gnss-sins/IGS000USA_R_20232680000_01D_01S_MO.rnx"  # The filepath to read ground truth
-GNSSBaseEph_FilePath: "/home/leiwh/Research/Document/MasterThesis/Example_05/Data/2023-09-25-03-01-32_maximal/gnss-sins/IGS000USA_R_20232680000_01D_01S_MN.rnx"  # The filepath to output result
-GNSSolution_FilePath: "/home/leiwh/Research/Document/Paper_SRKF/Data/2023-09-25-03-01-32_maximal/result/R_RTK_1Hz/gnss_data_1.pos"    # The filepath to output log information
+  - vrtk_6d9d0a_maximal_2022-12-13-03-28-21_0.bag
+GNSSBaseObs_FilePath: "/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/gnss-sins/IGS000USA_R_20223470000_06H_01S_MO.rnx"  # The filepath to read ground truth
+GNSSBaseEph_FilePath: "/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/gnss-sins/IGS000USA_R_20223470000_06H_01S_MN.rnx"  # The filepath to output result
+GNSSolution_FilePath: ""    # The filepath to output log information
 
 # ROS topic before convertion
 Imu_Topic_Input: "/imu/data"                                   # Imu data topic
