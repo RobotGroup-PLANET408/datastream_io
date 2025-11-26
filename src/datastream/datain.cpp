@@ -86,6 +86,8 @@ namespace dataio_common
             for (const auto &node : filenodes)
                 config.rosbag_filename.push_back((std::string)node);
         }
+        fsSettings["GNSSRoveObs_FilePath"] >> config.gnssroveobs_filepath;
+        fsSettings["GNSSRoveEph_FilePath"] >> config.gnssroveeph_filepath;
         fsSettings["GNSSBaseObs_FilePath"] >> config.gnssbaseobs_filepath;
         fsSettings["GNSSBaseEph_FilePath"] >> config.gnssbaseeph_filepath;
         fsSettings["GNSSolution_FilePath"] >> config.gnssolution_filepath;
@@ -544,7 +546,7 @@ namespace dataio_common
                 pubtime = pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
             // If need, write raw ublox format data
-            if (1)
+            if (0)
             {
                 std::ofstream outfile("/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/rosbag/gnss_obs.ubx", std::ios::binary | std::ios::app);
                 outfile.write(reinterpret_cast<const char *>(gnss_msg->message.data.data()), gnss_msg->message.data.size());
@@ -624,7 +626,7 @@ namespace dataio_common
             // If need, write raw ublox format data
             if (0)
             {
-                std::ofstream outfile("/media/leiwh/T7/01_RobotGroup/02_Data/20251105/laptop/kinematic/test/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                std::ofstream outfile("/media/leiwh/T7/01_RobotGroup/02_Data/Fixposition/2025-11-18/02/gnss_obs.ubx", std::ios::binary | std::ios::app);
                 outfile.write(reinterpret_cast<const char *>(gnss_msg->data.data()), gnss_msg->data.size());
                 outfile.close();
             }
@@ -673,23 +675,106 @@ namespace dataio_common
     }
 
     /**
-     * @brief       Extract GNSS raw data from the rinex 3.0x file
-     * @note        1. The GNSS raw data to read should be rinex3.0x format
-     *              2. The GNSS raw data is saved as IPS struct format
+     * @brief       The main function to extract GNSS observation data from file
+     * @note
      *
-     * @param[in]   char*     rinex_infilepath      rinex format file
-     * @param[out]  list      gnss_obsdata          store all observations data in all epochs
+     * @param[in]   char*       infilepath       data file
+     * @param[in]   string      filetype         filetype
+     * @param[out]  list        gnss_obsdata     GNSS observation data
      *
      * @return      bool      true      extract successfully
      *                        false     fail to extract
      */
-    extern bool Extract_GNSSObsData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
+    extern bool Extract_GNSSObsData_TXTFile_MAIN(const char *infilepath, const std::string filetype, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
     {
-        ///< 0. Open RINEX file
-        FILE *infile = fopen(rinex_infilepath, "rt");
+        if (filetype == "ubx")
+        {
+            Extract_GNSSObsData_UBXFormat(infilepath, gnss_obsdata);
+        }
+        else if (filetype == "rtcm3")
+        {
+            ;
+        }
+        else if (filetype == "obs")
+        {
+            Extract_GNSSObsData_RINEX3Format(infilepath, gnss_obsdata);
+        }
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract GNSS observation data from the ublox format file
+     * @note        1. The GNSS raw data is saved as IPS struct format
+     *
+     * @param[in]   char*     infilepath         data file
+     * @param[out]  list      gnss_obsdata       GNSS observation data
+     *
+     * @return      bool      true      extract successfully
+     *                        false     fail to extract
+     */
+    extern bool Extract_GNSSObsData_UBXFormat(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
+    {
+        ///< 0. Open UBX file
+        FILE *infile = fopen(infilepath, "rb");
         if (!infile)
         {
-            printf("Fail to open file %s to read.\n", rinex_infilepath);
+            printf("Fail to open file %s to read.\n", infilepath);
+            return false;
+        }
+
+        ///< 1. Prepare variables
+        // initilize and assign memory
+        raw_t raw;
+        init_raw(&raw, STRFMT_UBX);
+
+        ///< 2. Extract raw data
+        uint8_t data = '\0';
+        while (!feof(infile))
+        {
+            fread(&data, sizeof(uint8_t), 1, infile);
+            int message_type = input_raw(&raw, STRFMT_UBX, data);
+
+            // observation
+            if (message_type == 1)
+            {
+                gnss_common::IPS_OBSDATA oneobs;
+                Convert_GNSSObsStruct_RTKLIB2IPS(raw.obs.data, raw.obs.n, &oneobs);
+
+                // NOTE: There is a time delay between message time and receive time of GNSS raw data in VisionRTK.
+                //       So we use the receive time to publish message to facilitate timestamp matching with other
+                //       data such as imu data.
+                oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
+                gnss_obsdata.push_back(oneobs);
+            }
+        }
+
+        // free the memory
+        free_raw(&raw);
+
+        // close the file
+        fclose(infile);
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract GNSS observation data from the rinex 3.0x file
+     * @note        1. The GNSS raw data is saved as IPS struct format
+     *
+     * @param[in]   char*     infilepath         data file
+     * @param[out]  list      gnss_obsdata       GNSS observation data
+     *
+     * @return      bool      true      extract successfully
+     *                        false     fail to extract
+     */
+    extern bool Extract_GNSSObsData_RINEX3Format(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
+    {
+        ///< 0. Open RINEX file
+        FILE *infile = fopen(infilepath, "rt");
+        if (!infile)
+        {
+            printf("Fail to open file %s to read.\n", infilepath);
             return false;
         }
 

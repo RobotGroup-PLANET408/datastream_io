@@ -53,8 +53,10 @@ namespace dataio_common
     extern void Extract_GNSSRawData_VisionRTK01_ROSBag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata);
     extern void Extract_GNSSRawData_VisionRTK02_ROSBag(const rosbag::MessageInstance &msg, const dataio_common::timesystem timesys, raw_t *raw, std::list<gnss_common::IPS_OBSDATA> &obsdata, std::list<gnss_common::IPS_GPSEPH> &ephdata);
     ///< Txt file
-    extern bool Extract_GNSSObsData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
-    extern bool Extract_GNSSEphData_RINEX3Format(const char *rinex_infilepath, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata);
+    extern bool Extract_GNSSObsData_TXTFile_MAIN(const char *infilepath, const std::string filetype, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
+    extern bool Extract_GNSSObsData_UBXFormat(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
+    extern bool Extract_GNSSObsData_RINEX3Format(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
+    extern bool Extract_GNSSEphData_RINEX3Format(const char *infilepath, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata);
 
     /**
      * @brief       Extract INS Solution data

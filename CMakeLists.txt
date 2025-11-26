@@ -265,6 +265,11 @@ add_executable(bagconvert_VisionRTK2RobotGVINS src/bagconvert_VisionRTK2RobotGVI
 target_link_libraries(bagconvert_VisionRTK2RobotGVINS ${PROJECT_NAME}_lib)
 add_dependencies(bagconvert_VisionRTK2RobotGVINS ${PROJECT_NAME}_generate_messages_cpp)
 
+# convert rosbag file from Intel to RobotGVINS
+add_executable(bagconvert_Intel2RobotGVINS src/bagconvert_Intel2RobotGVINS.cpp)
+target_link_libraries(bagconvert_Intel2RobotGVINS ${PROJECT_NAME}_lib)
+add_dependencies(bagconvert_Intel2RobotGVINS ${PROJECT_NAME}_generate_messages_cpp)
+
 # convert rosbag file from VisionRTK to GICILIB
 add_executable(bagconvert_VisionRTK2GICILIB src/bagconvert_VisionRTK2GICILIB.cpp)
 target_link_libraries(bagconvert_VisionRTK2GICILIB ${PROJECT_NAME}_lib)

@@ -49,3 +49,4 @@ We are still working on improving the code reliability. For any technical issues
 * **2025.09.05** - The *(Version 1.1.2)*:  This version can convert convert GNSS raw data from RINEX 3.x format to GICI-LIB format. Thanks to the contribution of Lei weihao.
 * **2025.09.28** - The *(Version 1.1.3)*:  This version used template to simplify funcionts and improve reliability. Thanks to the contribution of Lei weihao.
 * **2025.11.18** - The *(Version 1.1.5)*:  This version can convert IMU raw data from IMR format to ROS standard format. Thanks to the contribution of Lei weihao.
+* **2025.11.18** - The *(Version 1.1.6)*:  This version can extract GNDS raw data from ubx format file to RobotGVINS format. And it can extract and convert camera/imu data from Intel D457. Thanks to the contribution of Lei weihao.

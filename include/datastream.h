@@ -150,6 +150,8 @@ namespace dataio_common
         std::string output_filepath = "\0";
         std::string rosbag_filepath = "\0";
         std::vector<std::string> rosbag_filename;
+        std::string gnssroveobs_filepath = "\0";
+        std::string gnssroveeph_filepath = "\0";
         std::string gnssbaseobs_filepath = "\0";
         std::string gnssbaseeph_filepath = "\0";
         std::string gnssolution_filepath = "\0";
