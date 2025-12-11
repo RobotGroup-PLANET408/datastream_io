@@ -31,6 +31,17 @@ int main(int argc, char **argv)
         ROS_ERROR("Data format is wrong. Please check.");
         return 0;
     }
+    // check configuration parameters
+    if (config.rosbag_filename.size() <= 0)
+    {
+        ROS_ERROR("Fail to load available rosbag files.");
+        return false;
+    }
+    if (config.output_filepath == "\0")
+    {
+        ROS_ERROR("Fail to load filepath to output.");
+        return false;
+    }
 
     ///< 3. Extract, convert and write each rosbag
     for (int i = 0; i < config.rosbag_filename.size(); i++)

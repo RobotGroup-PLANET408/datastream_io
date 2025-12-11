@@ -108,17 +108,23 @@ namespace dataio_common
         fsSettings["DataFormat_Input"] >> config.format_input;
         fsSettings["DataFormat_Output"] >> config.format_output;
 
-        // check configuration parameters
-        if (config.rosbag_filename.size() <= 0)
-        {
-            ROS_ERROR("Fail to load available rosbag files.");
-            return false;
-        }
-        if (config.output_filepath == "\0")
-        {
-            ROS_ERROR("Fail to load filepath to output.");
-            return false;
-        }
+        fsSettings["StreamMode_Base"] >> config.stream_mode_base;
+        fsSettings["GNSS_DataFormat_Base"] >> config.GNSS_dataformat_base;
+        filenodes = fsSettings["TCP_Base"];
+        config.TCP_IP_base = (std::string)filenodes[0];
+        config.TCP_Port_base = (double)filenodes[1];
+        filenodes = fsSettings["Serial_Base"];
+        config.Serial_Port_base = (std::string)filenodes[0];
+        config.Serial_BaudRate_base = (double)filenodes[1];
+
+        fsSettings["StreamMode_Rove"] >> config.stream_mode_rove;
+        fsSettings["GNSS_DataFormat_Rove"] >> config.GNSS_dataformat_rove;
+        filenodes = fsSettings["TCP_Rove"];
+        config.TCP_IP_rove = (std::string)filenodes[0];
+        config.TCP_Port_rove = (double)filenodes[1];
+        filenodes = fsSettings["Serial_Rove"];
+        config.Serial_Port_rove = (std::string)filenodes[0];
+        config.Serial_BaudRate_rove = (double)filenodes[1];
 
         return true;
     }
@@ -693,7 +699,7 @@ namespace dataio_common
         }
         else if (filetype == "rtcm3")
         {
-            ;
+            Extract_GNSSObsData_RTCM3Format(infilepath, gnss_obsdata);
         }
         else if (filetype == "obs")
         {
@@ -751,6 +757,62 @@ namespace dataio_common
 
         // free the memory
         free_raw(&raw);
+
+        // close the file
+        fclose(infile);
+
+        return true;
+    }
+
+    /**
+     * @brief       Extract GNSS observation data from the rtcm3 format file
+     * @note        1. The GNSS raw data is saved as IPS struct format
+     *
+     * @param[in]   char*     infilepath         data file
+     * @param[out]  list      gnss_obsdata       GNSS observation data
+     *
+     * @return      bool      true      extract successfully
+     *                        false     fail to extract
+     */
+    extern bool Extract_GNSSObsData_RTCM3Format(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata)
+    {
+
+        ///< 0. Open UBX file
+        FILE *infile = fopen(infilepath, "rb");
+        if (!infile)
+        {
+            printf("Fail to open file %s to read.\n", infilepath);
+            return false;
+        }
+
+        ///< 1. Prepare variables
+        // initilize and assign memory
+        rtcm_t rtcm;
+        init_rtcm(&rtcm);
+
+        ///< 2. Extract raw data
+        uint8_t data = '\0';
+        while (!feof(infile))
+        {
+            fread(&data, sizeof(uint8_t), 1, infile);
+            int message_type = input_rtcm3(&rtcm, data);
+
+            // observation
+            if (message_type == 1)
+            {
+                gnss_common::IPS_OBSDATA oneobs;
+                Convert_GNSSObsStruct_RTKLIB2IPS(rtcm.obs.data, rtcm.obs.n, &oneobs);
+
+                // NOTE: There is a time delay between message time and receive time of GNSS raw data in VisionRTK.
+                //       So we use the receive time to publish message to facilitate timestamp matching with other
+                //       data such as imu data.
+                oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
+                gnss_obsdata.push_back(oneobs);
+            }
+        }
+
+        // free the memory
+        free_rtcm(&rtcm);
 
         // close the file
         fclose(infile);
@@ -2005,6 +2067,53 @@ namespace dataio_common
         soldatas.push_back(onedata);
 
         return true;
+    }
+
+    /**
+     * @brief       Extract gnss solution data from string buffer
+     * @note        For nmea format
+     *
+     * @param[in]   string             buffer        buffer
+     * @param[out]
+     *
+     * @return      string      GNSS solutioh (nmea format)
+     */
+    extern std::string Extract_GNSSSolution_NEMAFormat(std::string &buffer)
+    {
+        std::string nmea_sol = "";
+
+        while (true)
+        {
+            size_t pos = buffer.find("$GNGGA");
+            if (pos == std::string::npos)
+            {
+                const size_t keep_tail = 2048;
+                if (buffer.size() > keep_tail)
+                {
+                    buffer.erase(0, buffer.size() - keep_tail);
+                }
+                break;
+            }
+
+            size_t line_end_pos = buffer.find('\n', pos);
+            if (line_end_pos == std::string::npos)
+            {
+                if (pos > 4096)
+                    buffer.erase(0, pos);
+                break;
+            }
+
+            size_t extract_len = line_end_pos - pos + 1;
+            std::string line = buffer.substr(pos, extract_len);
+            buffer.erase(0, pos + extract_len);
+
+            while (!line.empty() && (line.back() == '\r' || line.back() == '\n'))
+                line.pop_back();
+
+            nmea_sol = line;
+        }
+
+        return nmea_sol;
     }
 
     /**

@@ -811,4 +811,75 @@ namespace gnss_common
                   { return obs1.prn < obs2.prn; });
     }
 
+    /**
+     * @brief       Find leap seconds corresponding to UTC
+     * @note
+     *
+     * @param[in]   int      utc_year       UTC year
+     * @param[in]   int      utc_month      UTC month
+     * @param[in]   int      utc_day        UTC day
+     *
+     * @return      double      leap seconds
+     */
+    int getLeapSeconds(int utc_year, int utc_month, int utc_day)
+    {
+        std::tm current_tm = {};
+        current_tm.tm_year = utc_year - 1900;
+        current_tm.tm_mon = utc_month - 1;
+        current_tm.tm_mday = utc_day;
+        current_tm.tm_hour = 0;
+        current_tm.tm_min = 0;
+        current_tm.tm_sec = 0;
+
+        int leap_seconds = 0;
+
+        for (const auto &entry : LEAP_SECONDS_TABLE)
+        {
+            if (utc_year > entry.year || (utc_year == entry.year && utc_month > entry.month) ||
+                (utc_year == entry.year && utc_month == entry.month && utc_day >= entry.day))
+            {
+                leap_seconds = entry.delta_seconds;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return leap_seconds;
+    }
+
+    /**
+     * @brief       Convert deg/min/sec to decimal
+     * @note        1. For example: 30 deg 30 sec to 30.5 deg
+     *              1. Only for latitude/longitude
+     *
+     * @param[in]   string      nmea_val      nema format
+     * @param[in]   char        hemisphere    S | W
+     *
+     * @return      double      latitutde/longtitude
+     */
+    double NmeaToDecimal(const std::string &nmea_val, char hemisphere)
+    {
+        if (nmea_val.empty())
+            return 0.0;
+
+        size_t dot_pos = nmea_val.find('.');
+        if (dot_pos == std::string::npos)
+            return 0.0;
+
+        size_t minutes_start = dot_pos - 2;
+        std::string degree_str = nmea_val.substr(0, minutes_start);
+        std::string minute_str = nmea_val.substr(minutes_start);
+        double degrees = std::stod(degree_str);
+        double minutes = std::stod(minute_str);
+        double decimal_degrees = degrees + minutes / 60.0;
+
+        if (hemisphere == 'S' || hemisphere == 'W')
+        {
+            decimal_degrees = -decimal_degrees;
+        }
+
+        return decimal_degrees;
+    }
 }

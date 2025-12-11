@@ -44,6 +44,8 @@ namespace dataio_common
     ///< Txt file
     extern bool Extract_GNSSSolution_TXTFile(const char *infilepath, std::list<Solution_GNSS> &soldatas, dataformat datatype, const dataio_common::timesystem timesys, const int infolines = 0);
     extern bool Extract_GNSSSolution_IPSPOS_TXTFile(char *buffer, std::list<dataio_common::Solution_GNSS> &soldatas);
+    ///< Buffer
+    extern std::string Extract_GNSSSolution_NEMAFormat(std::string &buffer);
 
     /**
      * @brief       Extract GNSS raw data
@@ -55,6 +57,7 @@ namespace dataio_common
     ///< Txt file
     extern bool Extract_GNSSObsData_TXTFile_MAIN(const char *infilepath, const std::string filetype, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
     extern bool Extract_GNSSObsData_UBXFormat(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
+    extern bool Extract_GNSSObsData_RTCM3Format(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
     extern bool Extract_GNSSObsData_RINEX3Format(const char *infilepath, std::list<gnss_common::IPS_OBSDATA> &gnss_obsdata);
     extern bool Extract_GNSSEphData_RINEX3Format(const char *infilepath, std::list<gnss_common::IPS_GPSEPH> &gnss_ephdata);
 

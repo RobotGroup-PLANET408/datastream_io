@@ -36,6 +36,7 @@ namespace dataio_common
     extern template bool Convert_GNSSSolution_IPS2OtherFormat<datastreamio::RobotGVINS_GNSSSol>(const std::list<Solution_GNSS> &src_data, std::list<datastreamio::RobotGVINS_GNSSSol> &dst_data, const dataformat dst_format);
 
     extern bool Convert_GNSSSolData_IPS2RobotGVINS(const Solution_GNSS &src_data, datastreamio::RobotGVINS_GNSSSol &dst_data);
+    extern bool Convert_GNSSSolData_NMEA2IPS(const std::string &nmea_sol, Solution_GNSS &solution);
 
     /**
      * @brief       Convert GNSS raw data format

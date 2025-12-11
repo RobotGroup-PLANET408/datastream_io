@@ -315,6 +315,127 @@ namespace dataio_common
     }
 
     /**
+     * @brief       Extract GNSS solution data from GNGGA message
+     * @note
+     *
+     * @param[in]   string             data        GNGGA message
+     * @param[out]  Solution_GNSS      gnssol      GNSS solution
+     *
+     * @return      bool      true       extract successfully
+     *                        false      fail to extract
+     */
+    extern bool Convert_GNSSSolData_NMEA2IPS(const std::string &nmea_sol, Solution_GNSS &solution)
+    {
+        ///< 1. Prepare variables
+        std::stringstream ss(nmea_sol);
+        std::string segment;
+        std::vector<std::string> fields;
+        while (std::getline(ss, segment, ','))
+            fields.push_back(segment);
+
+        // check the number of fields
+        if (fields.size() < 15)
+            return false;
+
+        ///< 2. Extract solution data
+        try
+        {
+            // 2.1 timestamp
+            if (!fields[1].empty())
+            {
+                // (1) get UTC
+                /// NOTE: The system time should be sync
+                std::time_t now = std::time(nullptr);
+                std::tm local_time{};
+                localtime_r(&now, &local_time);
+                double raw_utc = std::stod(fields[1]);
+                int hh = static_cast<int>(raw_utc / 10000.0);
+                int mm = static_cast<int>((raw_utc - hh * 10000.0) / 100.0);
+                double ss = raw_utc - hh * 10000.0 - mm * 100.0;
+
+                gnss_common::IPS_YMDHMS utc;
+                utc.year = local_time.tm_year + 1900;
+                utc.month = local_time.tm_mon + 1;
+                utc.day = local_time.tm_mday;
+                utc.hour = hh;
+                utc.min = mm;
+                utc.sec = ss + 18.0;
+
+                // convert to GPSTime
+                gnss_common::IPS_GPSTIME gt = gnss_common::ymdhms2gps(utc);
+                solution.gps_week = gt.GPSWeek;
+                solution.gps_second = gt.secsOfWeek + gt.fracOfSec;
+                solution.timestamp = gt.GPSWeek * 7 * gnss_common::SECPERDAY + gt.secsOfWeek;
+                solution.pubtime = solution.timestamp;
+            }
+            else
+            {
+                return false;
+            }
+
+            // 2.2 Position
+            // latitude
+            if (!fields[2].empty() && !fields[3].empty())
+            {
+                solution.position_LLH[0] = gnss_common::NmeaToDecimal(fields[2], fields[3][0]) * IPS_D2R;
+            }
+            else
+            {
+                return false;
+            }
+
+            // longtitude
+            if (!fields[4].empty() && !fields[5].empty())
+            {
+                solution.position_LLH[1] = gnss_common::NmeaToDecimal(fields[4], fields[5][0]) * IPS_D2R;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (!fields[9].empty())
+            {
+                solution.position_LLH[2] = std::stod(fields[9]);
+            }
+            else
+            {
+                return false;
+            }
+
+            gnss_common::LLH2XYZ(solution.position_LLH, solution.position_XYZ);
+
+            // 2.3 HDOP
+            if (!fields[8].empty())
+            {
+                // position in ENU frame
+                Eigen::MatrixXd ENUCov = Eigen::MatrixXd::Identity(3, 3);
+                ENUCov(0, 0) = pow((std::stod(fields[8]) / 2.0 * 0.3), 2);
+                ENUCov(1, 1) = pow((std::stod(fields[8]) / 2.0 * 0.3), 2);
+                ENUCov(2, 2) = pow((std::stod(fields[8]) * 0.3), 2);
+
+                // position in ECEF frame
+                Eigen::MatrixXd R_nToe = gnss_common::ComputeRotMat_ENU2ECEF(solution.position_LLH[0], solution.position_LLH[1]);
+                Eigen::MatrixXd XYZCov = R_nToe * ENUCov * R_nToe.transpose();
+                solution.positioncov_XYZ[0] = XYZCov(0, 0), solution.positioncov_XYZ[1] = XYZCov(0, 1), solution.positioncov_XYZ[2] = XYZCov(0, 2);
+                solution.positioncov_XYZ[3] = XYZCov(1, 0), solution.positioncov_XYZ[4] = XYZCov(1, 1), solution.positioncov_XYZ[5] = XYZCov(1, 2);
+                solution.positioncov_XYZ[6] = XYZCov(2, 0), solution.positioncov_XYZ[7] = XYZCov(2, 1), solution.positioncov_XYZ[8] = XYZCov(2, 2);
+            }
+            else
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "GNGGA parsing error: " << e.what() << std::endl;
+            return false;
+        }
+    }
+
+    /**
      * @brief       Convert the GNSS observation data from rtklib struct to IPS struct
      * @note        1. It is used to process observation data in one epoch
      *

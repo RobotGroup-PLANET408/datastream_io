@@ -2,15 +2,15 @@
 ---
 
 # Data filepath
-Output_Filepath: "/home/leiwh/Research/Data/RobotGroup/20251125/02/rosbag"   # The rosbag after conversion
-ROSBag_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/02/raw"      # The raw rosbag
+Output_Filepath: "/home/leiwh/Research/Data/RobotGroup/20251125/03/rosbag"          # The rosbag after conversion
+ROSBag_FilePath: "/media/leiwh/T7/01_RobotGroup/02_Data/Robot/20251125/03/raw"      # The raw rosbag
 ROSBag_FileName: 
   - Intel.bag
-GNSSRoveObs_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/02/gnss-sins/fp-6d9d0a_2025-11-25-03-02-40_maximal_gnss1.ubx"   # GNSS rove observation data (ubx|rtcm3|obs)
+GNSSRoveObs_FilePath: "/media/leiwh/T7/01_RobotGroup/02_Data/Robot/20251125/03/raw/fp-6d9d0a_2025-11-25-03-37-56_maximal_gnss1.ubx"   # GNSS rove observation data (ubx|rtcm3|obs)
 GNSSRoveEph_FilePath: ""   # GNSS rove ephemeris data (ubx|obs)
-GNSSBaseObs_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/BaseStation/20251125.25o"          # GNSS base observation data (ubx|rtcm3|obs)
-GNSSBaseEph_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/BaseStation/20251125.25p"          # GNSS base ephemeris data (ubx|obs)
-GNSSolution_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/02/result/R_RTK/gnss_data_1.pos"   # GNSS position solution
+GNSSBaseObs_FilePath: "/media/leiwh/T7/01_RobotGroup/02_Data/Robot/20251125/BaseStation/20251125.25o"          # GNSS base observation data (ubx|rtcm3|obs)
+GNSSBaseEph_FilePath: "/media/leiwh/T7/01_RobotGroup/02_Data/Robot/20251125/BaseStation/20251125.25p"          # GNSS base ephemeris data (ubx|obs)
+GNSSolution_FilePath: "/home/leiwh/Research/Data/RobotGroup/20251125/03/result/R_RTK/gnss_data_1.pos"          # GNSS position solution
 
 # ROS topic before convertion
 Imu_Topic_Input: "/camera/imu"                                 # Imu data topic

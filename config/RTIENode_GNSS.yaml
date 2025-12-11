@@ -1,0 +1,21 @@
+%YAML 1.2
+---
+
+# Brief: Receive GNSS real-time data from TCP/Serial and publish as ROS messages
+
+# GNSS Base Station
+StreamMode_Base: 0                               # 0: TCP | 1: Serial
+TCP_Base: ["8.148.22.229", 8003]                 # IP Address, Port
+Serial_Base: ["", -1]                            # Port, Baudrate
+GNSSBaseObs_Topic_Output: "/gnss/obs/base"       # The GNSS observation data topic 
+GNSSBaseEph_Topic_Output: "/gnss/nav/base"       # The GNSS navigation data topic
+GNSS_DataFormat_Base: 1                          # 1: RTCM3 | 4: UBX (Shoud be consistent with rtklib)
+
+# GNSS Rove Station
+StreamMode_Rove: 1                               # 0: TCP | 1: Serial
+TCP_Rove: ["", -1]                               # IP Address, Port
+Serial_Rove: ["/dev/ttyUSB0", 38400]             # Port, Baudrate
+GNSSRoveObs_Topic_Output: "/gnss/obs/rove"       # The GNSS observation data topic 
+GNSSRoveEph_Topic_Output: "/gnss/nav/rove"       # The GNSS navigation data topic
+GNSSSol_Topic_Output: "/gnss/solution"           # The GNSS solution data topic
+GNSS_DataFormat_Rove: 1                          # 1: RTCM3 | 4: UBX (Shoud be consistent with rtklib)

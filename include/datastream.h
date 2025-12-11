@@ -87,6 +87,14 @@ const double GPS_BDS_SECOND = 14.0;                       ///< the second differ
 // data stream variables
 namespace dataio_common
 {
+    ///< GNSS data format
+    enum gnss_dataformat
+    {
+        RINEX_Format,
+        RTCM3_Format,
+        UBX_Format
+    };
+
     ///< data format
     enum dataformat
     {
@@ -131,8 +139,8 @@ namespace dataio_common
     static std::string RobotGVINS_gnsssol_topic = "/gnss/solution";
     static std::string RobotGVINS_gnssobs_topic_rove = "/gnss/obs/rove";
     static std::string RobotGVINS_gnssobs_topic_base = "/gnss/obs/base";
-    static std::string RobotGVINS_gnsseph_topic_rove = "/gnss/eph/rove";
-    static std::string RobotGVINS_gnsseph_topic_base = "/gnss/eph/base";
+    static std::string RobotGVINS_gnssnav_topic_rove = "/gnss/nav/rove";
+    static std::string RobotGVINS_gnssnav_topic_base = "/gnss/nav/base";
 }
 
 /**********************************************************************************************************************************
@@ -175,6 +183,20 @@ namespace dataio_common
         ///< Data format
         dataformat format_input = dataformat::ROS_Format;
         dataformat format_output = dataformat::ROS_Format;
+
+        ///< Stream Mode
+        int stream_mode_base = -1;
+        int stream_mode_rove = -1;
+        std::string TCP_IP_base = "\0";
+        std::string TCP_IP_rove = "\0";
+        int TCP_Port_base = -1;
+        int TCP_Port_rove = -1;
+        std::string Serial_Port_base = "\0";
+        std::string Serial_Port_rove = "\0";
+        int Serial_BaudRate_base = -1;
+        int Serial_BaudRate_rove = -1;
+        int GNSS_dataformat_base = -1;
+        int GNSS_dataformat_rove = -1;
 
         Configutation() = default;
     };

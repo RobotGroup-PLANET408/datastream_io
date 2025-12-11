@@ -74,6 +74,36 @@ namespace gnss_common
     static const double gs_ura_eph[15] = {
         2.4, 3.4, 4.85, 6.85, 9.65, 13.65, 24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0,
         3072.0, 6144.0};
+
+    // Leap Second Table Struct
+    struct LeapSecondEntry
+    {
+        int year;
+        int month;
+        int day;
+        int delta_seconds; // (GPS - UTC) seconds after this date
+    };
+
+    // Leap Second Table
+    const std::vector<LeapSecondEntry> LEAP_SECONDS_TABLE = {
+        {1981, 7, 1, 1},
+        {1982, 7, 1, 2},
+        {1983, 7, 1, 3},
+        {1985, 7, 1, 4},
+        {1988, 1, 1, 5},
+        {1990, 1, 1, 6},
+        {1991, 1, 1, 7},
+        {1992, 7, 1, 8},
+        {1993, 7, 1, 9},
+        {1994, 7, 1, 10},
+        {1996, 1, 1, 11},
+        {1997, 7, 1, 12},
+        {1999, 1, 1, 13},
+        {2006, 1, 1, 14},
+        {2009, 1, 1, 15},
+        {2012, 7, 1, 16},
+        {2015, 7, 1, 17},
+        {2017, 1, 1, 18}};
 }
 
 namespace gnss_common
@@ -310,6 +340,11 @@ namespace gnss_common
 namespace gnss_common
 {
     /**
+     * @brief       Convert deg/min/sec to decimal
+     */
+    double NmeaToDecimal(const std::string &nmea_val, char hemisphere);
+
+    /**
      * @brief       Convert the second to GPSWeek and GPSSecond
      */
     IPS_GPSTIME toGPSTIME(double sec);
@@ -409,7 +444,6 @@ namespace gnss_common
      * @brief       Sort the GNSS observations data by GNSS PRN
      */
     void SortGNSSObs_IPSStruct(IPS_OBSDATA *src);
-
 }
 
 #endif

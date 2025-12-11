@@ -256,9 +256,9 @@ target_link_libraries(bagmerge ${PROJECT_NAME}_lib)
 add_dependencies(bagmerge ${PROJECT_NAME}_generate_messages_cpp)
 
 # process Real-Time data stream from Vision-RTK2
-add_executable(rtiemode_VisionRTK src/RTIENode_VisionRTK.cpp)
-target_link_libraries(rtiemode_VisionRTK ${PROJECT_NAME}_lib)
-add_dependencies(rtiemode_VisionRTK ${PROJECT_NAME}_generate_messages_cpp)
+add_executable(rtiemode_gnss src/RTIENode_GNSS.cpp)
+target_link_libraries(rtiemode_gnss ${PROJECT_NAME}_lib)
+add_dependencies(rtiemode_gnss ${PROJECT_NAME}_generate_messages_cpp)
 
 # convert rosbag file from VisionRTK to RobotGVINS
 add_executable(bagconvert_VisionRTK2RobotGVINS src/bagconvert_VisionRTK2RobotGVINS.cpp)

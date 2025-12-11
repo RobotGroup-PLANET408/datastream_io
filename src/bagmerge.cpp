@@ -26,6 +26,17 @@ int main(int argc, char **argv)
         ROS_ERROR("The number of input arguments is wrong. Please check.");
         return 0;
     }
+    // check configuration parameters
+    if (config.rosbag_filename.size() <= 0)
+    {
+        ROS_ERROR("Fail to load available rosbag files.");
+        return false;
+    }
+    if (config.output_filepath == "\0")
+    {
+        ROS_ERROR("Fail to load filepath to output.");
+        return false;
+    }
 
     ///< 3. Open the bag to write
     std::string bag_outfilepath = config.output_filepath + "/mergedata.bag";
