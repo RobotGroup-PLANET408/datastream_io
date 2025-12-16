@@ -29,12 +29,17 @@ Clone the project to '~/catkin_ws/src'
 
 ## 3. Example
 ### 3.1 extract VisionRTK data, convert to RobotGVINS format and write to rosbag
-```
+```bash
     cd ~/catkin_ws
     source devel/setup.bash
     rosrun datastreamio bagconvert_VisionRTK src/datastream_io/config/bagconvert_VisionRTK.yaml
 ```
-
+### 3.2 receive and convert GNSS raw data, then publish as ros messages
+```bash
+    cd ~/catkin_ws
+    source devel/setup.bash
+    rosrun datastreamio rtiemode_gnss src/datastream_io/config/RTIENode_GNSS.yaml
+```
 
 ## 4. Acknowledgements
 We used [rtklib](https://github.com/tomojitakasu/RTKLIB/tree/rtklib_2.4.3) for GNSS format data conversion.
@@ -51,3 +56,4 @@ We are still working on improving the code reliability. For any technical issues
 * **2025.11.18** - The *(Version 1.1.5)*:  This version can convert IMU raw data from IMR format to ROS standard format. Thanks to the contribution of Lei weihao.
 * **2025.11.18** - The *(Version 1.1.6)*:  This version can extract GNSS raw data from ubx format file to RobotGVINS format. And it can extract and convert camera/imu data from Intel D457. Thanks to the contribution of Lei weihao.
 * **2025.12.11** - The *(Version 1.1.7)*:  This version can extract GNSS raw data from rtcm3 format file to RobotGVINS format. Moreover, it can receive GNSS raw data from TCP/Serial mode, and convert to RobotGVINS format to publish. The RTIENode.yaml has also been added. Thanks to the contribution of Lei weihao.
+* **2025.12.11** - The *(Version 1.1.8)*:  This version can save raw data from real-time stream. Thanks to the contribution of Lei weihao.
