@@ -195,7 +195,6 @@ namespace dataio_common
             {
                 // NOTE: Remember to exit when decoding observation data to ensure real-time processing
                 Convert_GNSSObsStruct_RTKLIB2IPS(obs->data, obs->n, &gnss_obsdata);
-                break;
             }
 
             if (message_type == 2) // ephemeris
@@ -210,20 +209,8 @@ namespace dataio_common
 
                     gnss_ephdata.push_back(ips_eph[i]);
                 }
-            }
 
-            // 2.3 skip this valid data
-            if (message_type > 0)
-            {
-                switch (dataformat)
-                {
-                case STRFMT_RTCM3:
-                    i += rtcm->len;
-                    break;
-                case STRFMT_UBX:
-                    i += raw->len;
-                    break;
-                }
+                // printf("Ephemeris: %d\n", gnss_ephdata.size());
             }
         }
 
@@ -503,6 +490,7 @@ namespace dataio_common
                         Convert_GNSSEphData_IPS2RobotGVINS(iter, eph_msg);
                         nav_msg.ephdata.push_back(eph_msg);
                     }
+
                     /// NOTE: use the current timestamp to publish
                     nav_msg.header.stamp = ros::Time::now();
                     pub_nav.publish(nav_msg);
