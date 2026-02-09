@@ -77,8 +77,9 @@ namespace dataio_common
         cv::FileNode filenodes;
         int inputformat = -1, outputformat = -1;
 
-        fsSettings["Output_Filepath"] >> config.output_filepath;
-        fsSettings["ROSBag_FilePath"] >> config.rosbag_filepath;
+        // rosbag filepath
+        fsSettings["Output_Filepath"] >> config.Output_Filepath;
+        fsSettings["ROSBag_FilePath"] >> config.ROSBag_FilePath;
         filenodes = fsSettings["ROSBag_FileName"];
         config.rosbag_filename.clear();
         if (filenodes.isSeq())
@@ -86,30 +87,69 @@ namespace dataio_common
             for (const auto &node : filenodes)
                 config.rosbag_filename.push_back((std::string)node);
         }
-        fsSettings["GNSSRoveObs_FilePath"] >> config.gnssroveobs_filepath;
-        fsSettings["GNSSRoveEph_FilePath"] >> config.gnssroveeph_filepath;
-        fsSettings["GNSSBaseObs_FilePath"] >> config.gnssbaseobs_filepath;
-        fsSettings["GNSSBaseEph_FilePath"] >> config.gnssbaseeph_filepath;
-        fsSettings["GNSSolution_FilePath"] >> config.gnssolution_filepath;
 
-        fsSettings["Imu_Topic_Input"] >> config.imu_topic_input;
-        fsSettings["Image_Topic_Input"] >> config.image_topic_input;
-        fsSettings["GNSSRaw_Topic_Input"] >> config.gnssraw_topic_input;
-        fsSettings["GNSSSol_Topic_Input"] >> config.gnsssol_topic_input;
+        // Imu configuration
+        fsSettings["Imu_FilePath_Input"] >> config.Imu_FilePath_Input;
+        fsSettings["Imu_FilePath_Output"] >> config.Imu_FilePath_Output;
+        fsSettings["Imu_DataFormat_Input"] >> config.Imu_DataFormat_Input;
+        fsSettings["Imu_DataFormat_Output"] >> config.Imu_DataFormat_Output;
+        fsSettings["Imu_Topic_Input"] >> config.Imu_Topic_Input;
+        fsSettings["Imu_Topic_Output"] >> config.Imu_Topic_Output;
 
-        fsSettings["Imu_Topic_Output"] >> config.imu_topic_output;
-        fsSettings["Image_Topic_Output"] >> config.image_topic_output;
-        fsSettings["GNSSRoveObs_Topic_Output"] >> config.gnssroveobs_topic_output;
-        fsSettings["GNSSBaseObs_Topic_Output"] >> config.gnssbaseobs_topic_output;
-        fsSettings["GNSSRoveEph_Topic_Output"] >> config.gnssroveeph_topic_output;
-        fsSettings["GNSSBaseEph_Topic_Output"] >> config.gnssbaseeph_topic_output;
-        fsSettings["GNSSSol_Topic_Output"] >> config.gnsssol_topic_output;
+        // Image configuration
+        fsSettings["Image_FilePath_Input"] >> config.Image_FilePath_Input;
+        fsSettings["Image_FilePath_Output"] >> config.Image_FilePath_Output;
+        fsSettings["Image_DataFormat_Input"] >> config.Image_DataFormat_Input;
+        fsSettings["Image_DataFormat_Output"] >> config.Image_DataFormat_Output;
+        fsSettings["Image_Topic_Input"] >> config.Image_Topic_Input;
+        fsSettings["Image_Topic_Output"] >> config.Image_Topic_Output;
 
-        fsSettings["DataFormat_Input"] >> config.format_input;
-        fsSettings["DataFormat_Output"] >> config.format_output;
+        // GNSS rove observation configuration
+        fsSettings["GNSSRoveObs_FilePath_Input"] >> config.GNSSRoveObs_FilePath_Input;
+        fsSettings["GNSSRoveObs_FilePath_Output"] >> config.GNSSRoveObs_FilePath_Output;
+        fsSettings["GNSSRoveObs_DataFormat_Input"] >> config.GNSSRoveObs_DataFormat_Input;
+        fsSettings["GNSSRoveObs_DataFormat_Output"] >> config.GNSSRoveObs_DataFormat_Output;
+        fsSettings["GNSSRoveObs_DecodeFormat"] >> config.GNSSRoveObs_DecodeFormat;
+        fsSettings["GNSSRoveObs_Topic_Input"] >> config.GNSSRoveObs_Topic_Input;
+        fsSettings["GNSSRoveObs_Topic_Output"] >> config.GNSSRoveObs_Topic_Output;
 
+        // GNSS rove navigation configuration
+        fsSettings["GNSSRoveNav_FilePath_Input"] >> config.GNSSRoveNav_FilePath_Input;
+        fsSettings["GNSSRoveNav_FilePath_Output"] >> config.GNSSRoveNav_FilePath_Output;
+        fsSettings["GNSSRoveNav_DataFormat_Input"] >> config.GNSSRoveNav_DataFormat_Input;
+        fsSettings["GNSSRoveNav_DataFormat_Output"] >> config.GNSSRoveNav_DataFormat_Output;
+        fsSettings["GNSSRoveNav_DecodeFormat"] >> config.GNSSRoveNav_DecodeFormat;
+        fsSettings["GNSSRoveNav_Topic_Input"] >> config.GNSSRoveNav_Topic_Input;
+        fsSettings["GNSSRoveNav_Topic_Output"] >> config.GNSSRoveNav_Topic_Output;
+
+        // GNSS base observation configuration
+        fsSettings["GNSSBaseObs_FilePath_Input"] >> config.GNSSBaseObs_FilePath_Input;
+        fsSettings["GNSSBaseObs_FilePath_Output"] >> config.GNSSBaseObs_FilePath_Output;
+        fsSettings["GNSSBaseObs_DataFormat_Input"] >> config.GNSSBaseObs_DataFormat_Input;
+        fsSettings["GNSSBaseObs_DataFormat_Output"] >> config.GNSSBaseObs_DataFormat_Output;
+        fsSettings["GNSSBaseObs_DecodeFormat"] >> config.GNSSBaseObs_DecodeFormat;
+        fsSettings["GNSSBaseObs_Topic_Input"] >> config.GNSSBaseObs_Topic_Input;
+        fsSettings["GNSSBaseObs_Topic_Output"] >> config.GNSSBaseObs_Topic_Output;
+
+        // GNSS base navigation configuration
+        fsSettings["GNSSBaseNav_FilePath_Input"] >> config.GNSSBaseNav_FilePath_Input;
+        fsSettings["GNSSBaseNav_FilePath_Output"] >> config.GNSSBaseNav_FilePath_Output;
+        fsSettings["GNSSBaseNav_DataFormat_Input"] >> config.GNSSBaseNav_DataFormat_Input;
+        fsSettings["GNSSBaseNav_DataFormat_Output"] >> config.GNSSBaseNav_DataFormat_Output;
+        fsSettings["GNSSBaseNav_DecodeFormat"] >> config.GNSSBaseNav_DecodeFormat;
+        fsSettings["GNSSBaseNav_Topic_Input"] >> config.GNSSBaseNav_Topic_Input;
+        fsSettings["GNSSBaseNav_Topic_Output"] >> config.GNSSBaseNav_Topic_Output;
+
+        // GNSS solution configuration
+        fsSettings["GNSSolution_FilePath_Input"] >> config.GNSSolution_FilePath_Input;
+        fsSettings["GNSSolution_FilePath_Output"] >> config.GNSSolution_FilePath_Output;
+        fsSettings["GNSSSol_DataFormat_Input"] >> config.GNSSSol_DataFormat_Input;
+        fsSettings["GNSSSol_DataFormat_Output"] >> config.GNSSSol_DataFormat_Output;
+        fsSettings["GNSSSol_Topic_Input"] >> config.GNSSSol_Topic_Input;
+        fsSettings["GNSSSol_Topic_Output"] >> config.GNSSSol_Topic_Output;
+
+        // TCP/Serial configuration
         fsSettings["StreamMode_Base"] >> config.stream_mode_base;
-        fsSettings["GNSS_DataFormat_Base"] >> config.GNSS_dataformat_base;
         filenodes = fsSettings["TCP_Base"];
         config.TCP_IP_base = (std::string)filenodes[0];
         config.TCP_Port_base = (double)filenodes[1];
@@ -118,13 +158,14 @@ namespace dataio_common
         config.Serial_BaudRate_base = (double)filenodes[1];
 
         fsSettings["StreamMode_Rove"] >> config.stream_mode_rove;
-        fsSettings["GNSS_DataFormat_Rove"] >> config.GNSS_dataformat_rove;
         filenodes = fsSettings["TCP_Rove"];
         config.TCP_IP_rove = (std::string)filenodes[0];
         config.TCP_Port_rove = (double)filenodes[1];
         filenodes = fsSettings["Serial_Rove"];
         config.Serial_Port_rove = (std::string)filenodes[0];
         config.Serial_BaudRate_rove = (double)filenodes[1];
+        fsSettings["GNSSBaseRaw_Filepath"] >> config.GNSSBaseRaw_Filepath;
+        fsSettings["GNSSRoveRaw_Filepath"] >> config.GNSSRoveRaw_Filepath;
 
         return true;
     }
@@ -167,11 +208,6 @@ namespace dataio_common
             if (m.instantiate<sensor_msgs::Imu>() != nullptr)
             {
                 sensor_msgs::Imu one_imudata = *(m.instantiate<sensor_msgs::Imu>());
-
-                // if need, convert Linux time to GPS time
-                if (timesys == dataio_common::timesystem::Linux_time)
-                    one_imudata.header.stamp = ros::Time(one_imudata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
-
                 imudatas.push_back(one_imudata);
             }
         }
@@ -383,11 +419,6 @@ namespace dataio_common
         {
             sensor_msgs::Image::ConstPtr image_msg = m.instantiate<sensor_msgs::Image>();
             sensor_msgs::Image one_imgdata = *image_msg;
-
-            // if need, convert the time timestamp from Linux time to GPS time
-            if (timesys == dataio_common::timesystem::Linux_time)
-                one_imgdata.header.stamp = ros::Time(one_imgdata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
-
             imgdatas.push_back(one_imgdata);
         }
 
@@ -445,11 +476,6 @@ namespace dataio_common
                     cv_image.encoding = "bgr8";
                     cv_image.image = image_data;
                     sensor_msgs::Image one_imgdata = *cv_image.toImageMsg();
-
-                    // if need, convert Linux time to GPS time
-                    if (timesys == dataio_common::timesystem::Linux_time)
-                        one_imgdata.header.stamp = ros::Time(one_imgdata.header.stamp.toSec() - GPS_LINUX_TIME + LEAP_SECOND);
-
                     imgdatas.push_back(one_imgdata);
                 }
                 catch (cv::Exception &e)
@@ -548,13 +574,11 @@ namespace dataio_common
 
             // use the message timestamp to publish
             double pubtime = gnss_msg->header.stamp.toSec();
-            if (timesys == timesystem::Linux_time)
-                pubtime = pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
             // If need, write raw ublox format data
             if (0)
             {
-                std::ofstream outfile("/home/leiwh/Research/Data/Fixposition/20221213/2022-12-13-03-28-21_maximal/rosbag/gnss_obs.ubx", std::ios::binary | std::ios::app);
+                std::ofstream outfile("/home/leiwh/Research/Data/Others/gnss_obs.ubx", std::ios::binary | std::ios::app);
                 outfile.write(reinterpret_cast<const char *>(gnss_msg->message.data.data()), gnss_msg->message.data.size());
                 outfile.close();
             }
@@ -571,10 +595,8 @@ namespace dataio_common
                     gnss_common::IPS_OBSDATA oneobs;
                     Convert_GNSSObsStruct_RTKLIB2IPS(raw->obs.data, raw->obs.n, &oneobs);
 
-                    // NOTE: There is a time delay between message time and receive time of GNSS raw data in VisionRTK.
-                    //       So we use the receive time to publish message to facilitate timestamp matching with other
-                    //       data such as imu data.
-                    oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
+                    // NOTE: We use the message timestamp to publish
+                    oneobs.pubtime = pubtime;
                     obsdata.push_back(oneobs);
                 }
 
@@ -589,7 +611,7 @@ namespace dataio_common
                         if (ips_eph[i].toc.GPSWeek <= 0)
                             continue;
 
-                        // NOTE: use the message timestamp to publish
+                        // NOTE: We use the message timestamp to publish
                         ips_eph[i].pubtime = pubtime;
                         ephdata.push_back(ips_eph[i]);
                     }
@@ -625,9 +647,7 @@ namespace dataio_common
             datastreamio::VisionRTK_GNSSRaw_02::ConstPtr gnss_msg = msg.instantiate<datastreamio::VisionRTK_GNSSRaw_02>();
 
             // use the message timestamp to publish
-            double timestamp = gnss_msg->stamp.toSec();
-            if (timesys == timesystem::Linux_time)
-                timestamp = timestamp - GPS_LINUX_TIME + LEAP_SECOND;
+            double pubtime = gnss_msg->stamp.toSec();
 
             // If need, write raw ublox format data
             if (0)
@@ -649,8 +669,8 @@ namespace dataio_common
                     gnss_common::IPS_OBSDATA oneobs;
                     Convert_GNSSObsStruct_RTKLIB2IPS(raw->obs.data, raw->obs.n, &oneobs);
 
-                    // NOTE: use the receive time to publish message
-                    oneobs.pubtime = oneobs.gt.GPSWeek * 604800.0 + oneobs.gt.secsOfWeek + oneobs.gt.fracOfSec;
+                    // NOTE: We use the message timestamp to publish
+                    oneobs.pubtime = pubtime;
                     obsdata.push_back(oneobs);
                 }
 
@@ -665,8 +685,8 @@ namespace dataio_common
                         if (ips_eph[i].toc.GPSWeek <= 0)
                             continue;
 
-                        // NOTE: use the message timestamp to publish
-                        ips_eph[i].pubtime = timestamp;
+                        // NOTE: We use the message timestamp to publish
+                        ips_eph[i].pubtime = pubtime;
                         ephdata.push_back(ips_eph[i]);
                     }
                 }
@@ -1331,7 +1351,6 @@ namespace dataio_common
 
             // sort and store each observation
             SortGNSSObs_IPSStruct(&obsData);
-            obsData.pubtime = obsData.gt.GPSWeek * 604800 + obsData.gt.secsOfWeek + obsData.gt.fracOfSec;
             gnss_obsdata.push_back(obsData);
         }
 
@@ -1893,8 +1912,6 @@ namespace dataio_common
             // use the message timestamp to publish
             // NOTE: if need, convert the time timestamp from Linux time to GPS time
             onedata.pubtime = sol_msg->header.stamp.toSec();
-            if (timesys == dataio_common::timesystem::Linux_time)
-                onedata.pubtime = onedata.pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
             // timestamp
             onedata.timestamp = sol_msg->time_gps_wno * 604800.0 + sol_msg->time_gps_tow;
@@ -1939,8 +1956,6 @@ namespace dataio_common
             // use the message timestamp to publish
             // NOTE: if need, convert the time timestamp from Linux time to GPS time
             onedata.pubtime = sol_msg->header.stamp.toSec();
-            if (timesys == dataio_common::timesystem::Linux_time)
-                onedata.pubtime = onedata.pubtime - GPS_LINUX_TIME + LEAP_SECOND;
 
             // timestamp
             // NOTE: The timestamp is used to match with IMU data in processing
@@ -2049,7 +2064,7 @@ namespace dataio_common
         onedata.gps_week = GPSWeek;
         onedata.gps_second = GPSSecond;
         onedata.timestamp = GPSWeek * 604800.0 + GPSSecond;
-        onedata.pubtime = onedata.timestamp;
+        onedata.pubtime = onedata.timestamp + GPS_LINUX_TIME - LEAP_SECOND;
 
         // (2) position and covariance
         onedata.position_XYZ[0] = XYZ[0], onedata.position_XYZ[1] = XYZ[1], onedata.position_XYZ[2] = XYZ[2];

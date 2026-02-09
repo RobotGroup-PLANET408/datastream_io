@@ -25,6 +25,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV 3 REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -231,6 +234,12 @@ include_directories(
 ## include header files
 include_directories(include)
 include_directories(${PROJECT_SOURCE_DIR}/../../devel/include/${PROJECT_NAME})
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${GSTREAMER_INCLUDE_DIRS}
+  ${GSTREAMER_APP_INCLUDE_DIRS}
+)
 
 ## include source files
 aux_source_directory(src/datastream DIR_DATAIOSRC)
@@ -242,7 +251,7 @@ list(APPEND DIR_ALL ${DIR_DATAIOSRC}
 add_library(${PROJECT_NAME}_lib SHARED ${DIR_ALL})
 
 ## link with third party libraries
-target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${GSTREAMER_LIBRARIES} ${GSTREAMER_APP_LIBRARIES})
 
 ## generate the executable program and link with the library
 # test function
@@ -250,15 +259,15 @@ add_executable(test_function src/main.cpp)
 target_link_libraries(test_function ${PROJECT_NAME}_lib)
 add_dependencies(test_function ${PROJECT_NAME}_generate_messages_cpp)
 
-# merge multiple rosbag files
-add_executable(bagmerge src/bagmerge.cpp)
-target_link_libraries(bagmerge ${PROJECT_NAME}_lib)
-add_dependencies(bagmerge ${PROJECT_NAME}_generate_messages_cpp)
-
 # process Real-Time data stream from Vision-RTK2
 add_executable(rtiemode_gnss src/RTIENode_GNSS.cpp)
 target_link_libraries(rtiemode_gnss ${PROJECT_NAME}_lib)
 add_dependencies(rtiemode_gnss ${PROJECT_NAME}_generate_messages_cpp)
+
+# convert rosbag file from VisionRTK to RobotGVINS
+add_executable(getimage_VisionRTK2ROS src/getimage_VisionRTK2ROS.cpp)
+target_link_libraries(getimage_VisionRTK2ROS ${PROJECT_NAME}_lib)
+add_dependencies(getimage_VisionRTK2ROS ${PROJECT_NAME}_generate_messages_cpp)
 
 # convert rosbag file from VisionRTK to RobotGVINS
 add_executable(bagconvert_VisionRTK2RobotGVINS src/bagconvert_VisionRTK2RobotGVINS.cpp)

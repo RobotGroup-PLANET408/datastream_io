@@ -754,8 +754,8 @@ namespace dataio_common
             return false;
 
         // convert and store
-        dst_data.header.stamp = ros::Time(src_data.pubtime);
         dst_data.timestamp = src_data.gt.GPSWeek * 604800 + src_data.gt.secsOfWeek + src_data.gt.fracOfSec;
+        dst_data.header.stamp = ros::Time(dst_data.timestamp + GPS_LINUX_TIME - LEAP_SECOND);
         dst_data.flag = src_data.flag;
         dst_data.nsat = src_data.nsat;
         for (int i = 0; i < IPS_NSYS; i++)

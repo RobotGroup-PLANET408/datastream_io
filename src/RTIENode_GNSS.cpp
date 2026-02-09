@@ -44,11 +44,11 @@ int main(int argc, char **argv)
         ROS_ERROR("[Base Station]  Stream mode is wrong. Please check.");
         return false;
     }
-    std::string obstopic_base = config.gnssbaseobs_topic_output;
-    std::string ephtopic_base = config.gnssbaseeph_topic_output;
-    std::string rawdata_base = "/home/leiwh/Research/Data/RawData_Base.rtcm3";
+    std::string obstopic_base = config.GNSSBaseObs_Topic_Output;
+    std::string ephtopic_base = config.GNSSBaseNav_Topic_Output;
+    std::string rawdata_base = config.GNSSBaseRaw_Filepath;
     std::thread baseThread([&]()
-                           { dataio_common::Receive_and_Publish_GNSSRawData(config.stream_mode_base, stream_para1_base.c_str(), stream_para2_base, config.GNSS_dataformat_base, obstopic_base, ephtopic_base, "", rawdata_base.c_str()); });
+                           { dataio_common::Receive_and_Publish_GNSSRawData(config.stream_mode_base, stream_para1_base.c_str(), stream_para2_base, config.GNSSBaseObs_DecodeFormat, obstopic_base, ephtopic_base, "", rawdata_base.c_str()); });
 
     // 3. Receive, convert and publish GNSS rove station
     std::string stream_para1_rove = "";
@@ -68,12 +68,12 @@ int main(int argc, char **argv)
         baseThread.join();
         return false;
     }
-    std::string obstopic_rove = config.gnssroveobs_topic_output;
-    std::string ephtopic_rove = config.gnssroveeph_topic_output;
-    std::string soltopic_rove = config.gnsssol_topic_output;
-    std::string rawdata_rove = "/home/leiwh/Research/Data/RawData_Rove.rtcm3";
+    std::string obstopic_rove = config.GNSSRoveObs_Topic_Output;
+    std::string ephtopic_rove = config.GNSSRoveNav_Topic_Output;
+    std::string soltopic_rove = config.GNSSSol_Topic_Output;
+    std::string rawdata_rove = config.GNSSRoveRaw_Filepath;
     std::thread roveThread([&]()
-                           { dataio_common::Receive_and_Publish_GNSSRawData(config.stream_mode_rove, stream_para1_rove.c_str(), stream_para2_rove, config.GNSS_dataformat_base, obstopic_rove, ephtopic_rove, soltopic_rove, rawdata_rove.c_str()); });
+                           { dataio_common::Receive_and_Publish_GNSSRawData(config.stream_mode_rove, stream_para1_rove.c_str(), stream_para2_rove, config.GNSSRoveObs_DecodeFormat, obstopic_rove, ephtopic_rove, soltopic_rove, rawdata_rove.c_str()); });
 
     ros::AsyncSpinner spinner(2);
     spinner.start();

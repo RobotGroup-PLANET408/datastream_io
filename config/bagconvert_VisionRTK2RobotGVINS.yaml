@@ -19,7 +19,7 @@ Imu_FilePath_Output: ""                                        # The filepath to
 Imu_DataFormat_Input: 0                                        # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 Imu_DataFormat_Output: 0                                       # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 Imu_Topic_Input: "/imu/data"                                   # Imu data topic to extract
-Imu_Topic_Output: "/gici/imu_raw"                            # Imu data topic to write
+Imu_Topic_Output: "/VRTK2/imu/data"                            # Imu data topic to write
 
 # Image
 # NOTE: The input and output filepath should be Null for rosbag file
@@ -28,50 +28,50 @@ Image_FilePath_Output: ""                                      # The filepath to
 Image_DataFormat_Input: 0                                      # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 Image_DataFormat_Output: 0                                     # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 Image_Topic_Input: "/camera/lowres/image"                      # Image data topic to extract
-Image_Topic_Output: "/gici/image_raw"                        # Image data topic to write
+Image_Topic_Output: "/VRTK2/image/data"                        # Image data topic to write
 
 # GNSS Rove Observation
 # NOTE: The input and output filepath should be Null for rosbag file
 GNSSRoveObs_FilePath_Input: ""                                 # The filepath to extact GNSS observation data
 GNSSRoveObs_FilePath_Output: ""                                # The filepath to write GNSS observation data
 GNSSRoveObs_DataFormat_Input: 1                                # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
-GNSSRoveObs_DataFormat_Output: 7                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSRoveObs_DataFormat_Output: 4                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 GNSSRoveObs_DecodeFormat: 4                                    # 1: RTCM3 | 4: UBX | 13: RINEX (should be consistent with rtklib)
 GNSSRoveObs_Topic_Input: "/gnss1/raw"                          # The GNSS observation topic to extract
-GNSSRoveObs_Topic_Output: "/gici/gnss_rover/observations"                     # The GNSS observation topic to write
+GNSSRoveObs_Topic_Output: "/gnss/obs/rove"                     # The GNSS observation topic to write
 
 # GNSS Rove Navigation
 # NOTE: The input and output filepath should be Null for rosbag file
 GNSSRoveNav_FilePath_Input: ""                                 # The filepath to extact GNSS navigation data
 GNSSRoveNav_FilePath_Output: ""                                # The filepath to write GNSS navigation data
 GNSSRoveNav_DataFormat_Input: 1                                # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
-GNSSRoveNav_DataFormat_Output: 7                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSRoveNav_DataFormat_Output: 4                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 GNSSRoveNav_DecodeFormat: 4                                    # 1: RTCM3 | 4: UBX | 13: RINEX  (should be consistent with rtklib)
 GNSSRoveNav_Topic_Input: "/gnss1/raw"                          # The GNSS navigation data topic to extract
-GNSSRoveNav_Topic_Output: "/gici/gnss_ephemeris/ephemerides"                     # The GNSS navigation data topic to write
+GNSSRoveNav_Topic_Output: "/gnss/nav/rove"                     # The GNSS navigation data topic to write
 
 # GNSS Base Observation
 GNSSBaseObs_FilePath_Input: "/home/leiwh/Research/Data/Fixposition/20230925/BaseStation/IGS000USA_R_20232680000_01D_01S_MO.rnx" # The filepath to extact GNSS observation data
 GNSSBaseObs_FilePath_Output: ""                                # The filepath to extact GNSS observation data
-GNSSBaseObs_DataFormat_Input: -1                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
-GNSSBaseObs_DataFormat_Output: 7                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSBaseObs_DataFormat_Input: 0                                # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSBaseObs_DataFormat_Output: 4                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 GNSSBaseObs_DecodeFormat: 13                                   # 1: RTCM3 | 4: UBX | 13: RINEX  (should be consistent with rtklib)
 GNSSBaseObs_Topic_Input: ""                                    # The GNSS observation data topic to extract
-GNSSBaseObs_Topic_Output: "/gici/gnss_reference/observations"                     # The GNSS observation data topic to write
+GNSSBaseObs_Topic_Output: "/gnss/obs/base"                     # The GNSS observation data topic to write
 
 # GNSS Base Navigation
 GNSSBaseNav_FilePath_Input: "/home/leiwh/Research/Data/Fixposition/20230925/BaseStation/IGS000USA_R_20232680000_01D_01S_MN.rnx" # The filepath to extact GNSS navigation data
 GNSSBaseNav_FilePath_Output: ""                                # The filepath to extact GNSS navigation data
-GNSSBaseNav_DataFormat_Input: -1                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
-GNSSBaseNav_DataFormat_Output: 7                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSBaseNav_DataFormat_Input: 0                                # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSBaseNav_DataFormat_Output: 4                               # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 GNSSBaseNav_DecodeFormat: 13                                   # 1: RTCM3 | 4: UBX | 13: RINEX  (should be consistent with rtklib)
 GNSSBaseNav_Topic_Input: ""                                    # The GNSS navigation data topic to extract
-GNSSBaseNav_Topic_Output: "/gici/gnss_reference/ephemerides"                     # The GNSS navigation data topic to write
+GNSSBaseNav_Topic_Output: "/gnss/nav/base"                     # The GNSS navigation data topic to write
 
 # GNSS Solution
-GNSSolution_FilePath_Input: "" # The filepath to extact GNSS solution data
+GNSSolution_FilePath_Input: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/result/R_RTK/gnss_data_1.pos" # The filepath to extact GNSS solution data
 GNSSolution_FilePath_Output: ""                                # The filepath to write GNSS solution data
-GNSSSol_DataFormat_Input: -1                                   # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
-GNSSSol_DataFormat_Output: -1                                  # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSSol_DataFormat_Input: 6                                    # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSSol_DataFormat_Output: 4                                   # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
 GNSSSol_Topic_Input: ""                                        # The GNSS solution data topic to extract
-GNSSSol_Topic_Output: ""                                       # The GNSS solution data topic to write
+GNSSSol_Topic_Output: "/gnss/solution"                         # The GNSS solution data topic to write

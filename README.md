@@ -57,3 +57,5 @@ We are still working on improving the code reliability. For any technical issues
 * **2025.11.18** - The *(Version 1.1.6)*:  This version can extract GNSS raw data from ubx format file to RobotGVINS format. And it can extract and convert camera/imu data from Intel D457. Thanks to the contribution of Lei weihao.
 * **2025.12.11** - The *(Version 1.1.7)*:  This version can extract GNSS raw data from rtcm3 format file to RobotGVINS format. Moreover, it can receive GNSS raw data from TCP/Serial mode, and convert to RobotGVINS format to publish. The RTIENode.yaml has also been added. Thanks to the contribution of Lei weihao.
 * **2025.12.11** - The *(Version 1.1.8)*:  This version can save raw data from real-time stream. Thanks to the contribution of Lei weihao.
+* **2025.12.11** - The *(Version 1.1.9)*:  This version fix some problems of real-time stream. Thanks to the contribution of Gu shuo, Zhao jianhe and Lei weihao.
+* **2026.02.09** - The *(Version 1.2.0)*:  This version has optimized the configuration parameters and yaml files. Thanks to the contribution of Lei weihao.

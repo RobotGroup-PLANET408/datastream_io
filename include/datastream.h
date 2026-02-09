@@ -18,6 +18,8 @@
 #include <netinet/in.h>
 #include <cerrno>
 #include <type_traits>
+#include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 #include <algorithm>
 #include <vector>
 #include <list>
@@ -154,35 +156,70 @@ namespace dataio_common
      */
     struct Configutation
     {
-        ///< Data filepath
-        std::string output_filepath = "\0";
-        std::string rosbag_filepath = "\0";
+        // rosbag filepath
+        std::string Output_Filepath = "\0";
+        std::string ROSBag_FilePath = "\0";
         std::vector<std::string> rosbag_filename;
-        std::string gnssroveobs_filepath = "\0";
-        std::string gnssroveeph_filepath = "\0";
-        std::string gnssbaseobs_filepath = "\0";
-        std::string gnssbaseeph_filepath = "\0";
-        std::string gnssolution_filepath = "\0";
 
-        ///< ROS topic
-        // before convertion
-        std::string imu_topic_input = "\0";
-        std::string image_topic_input = "\0";
-        std::string gnssraw_topic_input = "\0";
-        std::string gnsssol_topic_input = "\0";
+        // Imu configuration
+        std::string Imu_FilePath_Input = "\0";
+        std::string Imu_FilePath_Output = "\0";
+        dataformat Imu_DataFormat_Input = dataformat::ROS_Format;
+        dataformat Imu_DataFormat_Output = dataformat::ROS_Format;
+        std::string Imu_Topic_Input = "\0";
+        std::string Imu_Topic_Output = "\0";
 
-        // after convertion
-        std::string imu_topic_output = "\0";
-        std::string image_topic_output = "\0";
-        std::string gnssroveobs_topic_output = "\0";
-        std::string gnssbaseobs_topic_output = "\0";
-        std::string gnssroveeph_topic_output = "\0";
-        std::string gnssbaseeph_topic_output = "\0";
-        std::string gnsssol_topic_output = "\0";
+        // Image configuration
+        std::string Image_FilePath_Input = "\0";
+        std::string Image_FilePath_Output = "\0";
+        dataformat Image_DataFormat_Input = dataformat::ROS_Format;
+        dataformat Image_DataFormat_Output = dataformat::ROS_Format;
+        std::string Image_Topic_Input = "\0";
+        std::string Image_Topic_Output = "\0";
 
-        ///< Data format
-        dataformat format_input = dataformat::ROS_Format;
-        dataformat format_output = dataformat::ROS_Format;
+        // GNSS rove observation configuration
+        std::string GNSSRoveObs_FilePath_Input = "\0";
+        std::string GNSSRoveObs_FilePath_Output = "\0";
+        dataformat GNSSRoveObs_DataFormat_Input = dataformat::ROS_Format;
+        dataformat GNSSRoveObs_DataFormat_Output = dataformat::ROS_Format;
+        int GNSSRoveObs_DecodeFormat = 0;
+        std::string GNSSRoveObs_Topic_Input = "\0";
+        std::string GNSSRoveObs_Topic_Output = "\0";
+
+        // GNSS rove navigation configuration
+        std::string GNSSRoveNav_FilePath_Input = "\0";
+        std::string GNSSRoveNav_FilePath_Output = "\0";
+        dataformat GNSSRoveNav_DataFormat_Input = dataformat::ROS_Format;
+        dataformat GNSSRoveNav_DataFormat_Output = dataformat::ROS_Format;
+        int GNSSRoveNav_DecodeFormat = 0;
+        std::string GNSSRoveNav_Topic_Input = "\0";
+        std::string GNSSRoveNav_Topic_Output = "\0";
+
+        // GNSS base observation configuration
+        std::string GNSSBaseObs_FilePath_Input = "\0";
+        std::string GNSSBaseObs_FilePath_Output = "\0";
+        dataformat GNSSBaseObs_DataFormat_Input = dataformat::ROS_Format;
+        dataformat GNSSBaseObs_DataFormat_Output = dataformat::ROS_Format;
+        int GNSSBaseObs_DecodeFormat = 0;
+        std::string GNSSBaseObs_Topic_Input = "\0";
+        std::string GNSSBaseObs_Topic_Output = "\0";
+
+        // GNSS base navigation configuration
+        std::string GNSSBaseNav_FilePath_Input = "\0";
+        std::string GNSSBaseNav_FilePath_Output = "\0";
+        dataformat GNSSBaseNav_DataFormat_Input = dataformat::ROS_Format;
+        dataformat GNSSBaseNav_DataFormat_Output = dataformat::ROS_Format;
+        int GNSSBaseNav_DecodeFormat = 0;
+        std::string GNSSBaseNav_Topic_Input = "\0";
+        std::string GNSSBaseNav_Topic_Output = "\0";
+
+        // GNSS solution
+        std::string GNSSolution_FilePath_Input = "\0";
+        std::string GNSSolution_FilePath_Output = "\0";
+        dataformat GNSSSol_DataFormat_Input = dataformat::ROS_Format;
+        dataformat GNSSSol_DataFormat_Output = dataformat::ROS_Format;
+        std::string GNSSSol_Topic_Input = "\0";
+        std::string GNSSSol_Topic_Output = "\0";
 
         ///< Stream Mode
         int stream_mode_base = -1;
@@ -195,8 +232,8 @@ namespace dataio_common
         std::string Serial_Port_rove = "\0";
         int Serial_BaudRate_base = -1;
         int Serial_BaudRate_rove = -1;
-        int GNSS_dataformat_base = -1;
-        int GNSS_dataformat_rove = -1;
+        std::string GNSSBaseRaw_Filepath = "\0";
+        std::string GNSSRoveRaw_Filepath = "\0";
 
         Configutation() = default;
     };
