@@ -173,7 +173,7 @@ int main(int argc, char **argv)
                 // step 4: bind ephemeris data as ros messages to publish
                 ros::Time start_time(0.0), end_time(0.0);
                 dataio_common::Get_StartEndTime_ROSBag(bag_outfilepath.c_str(), config.Imu_Topic_Output, start_time, end_time);
-                std::list<datastreamio::GICILIB_GnssEphemerides> gici_ephset(0);
+                std::list<datastreamio::GICILIB_GnssEphemerides> gici_navdata(0);
                 for (double timestamp = start_time.toSec(); timestamp <= end_time.toSec(); timestamp += 30.0)
                 {
                     // (1) find the nearest ephemeris data
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
                     one_msg.header.stamp = ros::Time(timestamp);
                     for (const auto &iter : one_set)
                         one_msg.ephemerides.push_back(iter);
-                    gici_ephset.push_back(one_msg);
+                    gici_navdata.push_back(one_msg);
                 }
 
                 // step 5: write GNSS raw data to bag file
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
                     ROS_ERROR("Failed to write GNSS observation data to bag file.");
                     return false;
                 }
-                if (dataio_common::Write_ROSMessage_ROSBag(outfile_bag, config.GNSSRoveObs_Topic_Output, gici_ephdata, start_time, end_time) == false)
+                if (dataio_common::Write_ROSMessage_ROSBag(outfile_bag, config.GNSSRoveObs_Topic_Output, gici_navdata, start_time, end_time) == false)
                 {
                     ROS_ERROR("Failed to write GNSS navigation data to bag file.");
                     return false;

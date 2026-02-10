@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
   geometry_msgs
   cv_bridge
   image_transport
@@ -100,7 +101,7 @@ endforeach()
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-  DEPENDENCIES std_msgs geometry_msgs
+  DEPENDENCIES std_msgs sensor_msgs geometry_msgs
 )
 
 ################################################
@@ -133,7 +134,7 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime
+  CATKIN_DEPENDS roscpp std_msgs sensor_msgs geometry_msgs message_runtime
 )
 
 
@@ -259,15 +260,15 @@ add_executable(test_function src/main.cpp)
 target_link_libraries(test_function ${PROJECT_NAME}_lib)
 add_dependencies(test_function ${PROJECT_NAME}_generate_messages_cpp)
 
-# process Real-Time data stream from Vision-RTK2
-add_executable(rtiemode_gnss src/RTIENode_GNSS.cpp)
-target_link_libraries(rtiemode_gnss ${PROJECT_NAME}_lib)
-add_dependencies(rtiemode_gnss ${PROJECT_NAME}_generate_messages_cpp)
+# process Real-Time data stream GNSS
+add_executable(rtienode_gnss src/RTIENode_GNSS.cpp)
+target_link_libraries(rtienode_gnss ${PROJECT_NAME}_lib)
+add_dependencies(rtienode_gnss ${PROJECT_NAME}_generate_messages_cpp)
 
-# convert rosbag file from VisionRTK to RobotGVINS
-add_executable(getimage_VisionRTK2ROS src/getimage_VisionRTK2ROS.cpp)
-target_link_libraries(getimage_VisionRTK2ROS ${PROJECT_NAME}_lib)
-add_dependencies(getimage_VisionRTK2ROS ${PROJECT_NAME}_generate_messages_cpp)
+# process Real-Time data stream from Vision-RTK2 (Imu and Image)
+add_executable(rtienode_visionrtk2 src/RTIENode_VisionRTK2.cpp)
+target_link_libraries(rtienode_visionrtk2 ${PROJECT_NAME}_lib)
+add_dependencies(rtienode_visionrtk2 ${PROJECT_NAME}_generate_messages_cpp)
 
 # convert rosbag file from VisionRTK to RobotGVINS
 add_executable(bagconvert_VisionRTK2RobotGVINS src/bagconvert_VisionRTK2RobotGVINS.cpp)
