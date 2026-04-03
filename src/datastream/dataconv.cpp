@@ -257,6 +257,18 @@ namespace dataio_common
 
             switch (dst_format)
             {
+            case dataformat::ROS_Format:
+                if constexpr (std::is_same_v<T, sensor_msgs::NavSatFix>)
+                {
+                    Convert_GNSSSolData_IPS2ROSFormat(iter, one_data);
+                }
+                else
+                {
+                    ROS_ERROR("[Convert_GNSSSolution_IPS2OtherFormat] Unsupported ROS data format.");
+                    return false;
+                }
+                break;
+
             case dataformat::RobotGVINS_Format:
                 if constexpr (std::is_same_v<T, datastreamio::RobotGVINS_GNSSSol>)
                 {
@@ -281,6 +293,46 @@ namespace dataio_common
     }
 
     template bool Convert_GNSSSolution_IPS2OtherFormat<datastreamio::RobotGVINS_GNSSSol>(const std::list<Solution_GNSS> &src_data, std::list<datastreamio::RobotGVINS_GNSSSol> &dst_data, const dataformat dst_format);
+    template bool Convert_GNSSSolution_IPS2OtherFormat<sensor_msgs::NavSatFix>(const std::list<Solution_GNSS> &src_data, std::list<sensor_msgs::NavSatFix> &dst_data, const dataformat dst_format);
+
+    /**
+     * @brief       Convert GNSS solution data from IPS format to ROS format
+     * @note
+     *
+     * @param[in]   Solution_GNSS      src_data      IPS format data
+     * @param[in]   NavSatFix          dst_data      ROS format data
+     *
+     * @return      bool       true       convert successfully
+     *                         false      fail to convert
+     */
+    extern bool Convert_GNSSSolData_IPS2ROSFormat(const Solution_GNSS &src_data, sensor_msgs::NavSatFix &dst_data)
+    {
+        if (src_data.timestamp <= 0 || src_data.pubtime <= 0)
+            return false;
+
+        // timestamp
+        dst_data.header.stamp = ros::Time(src_data.pubtime);
+
+        // convert position from XYZ to LLH
+        double LLH[3] = {0.0, 0.0, 0.0};
+        gnss_common::XYZ2LLH(src_data.position_XYZ, LLH);
+        dst_data.latitude = LLH[0] * R2D;
+        dst_data.longitude = LLH[1] * R2D;
+        dst_data.altitude = LLH[2];
+
+        // convert position covariance from XYZ to ENU
+        Eigen::Matrix3d XYZCov = Eigen::Matrix3d::Zero();
+        XYZCov(0, 0) = src_data.positioncov_XYZ[0], XYZCov(0, 1) = src_data.positioncov_XYZ[1], XYZCov(0, 2) = src_data.positioncov_XYZ[2];
+        XYZCov(1, 0) = src_data.positioncov_XYZ[3], XYZCov(1, 1) = src_data.positioncov_XYZ[4], XYZCov(1, 2) = src_data.positioncov_XYZ[5];
+        XYZCov(2, 0) = src_data.positioncov_XYZ[6], XYZCov(2, 1) = src_data.positioncov_XYZ[7], XYZCov(2, 2) = src_data.positioncov_XYZ[8];
+        Eigen::Matrix3d R_nToe = gnss_common::ComputeRotMat_ENU2ECEF(LLH[0], LLH[1]);
+        Eigen::Matrix3d ENUCov = R_nToe.transpose() * XYZCov * R_nToe;
+        dst_data.position_covariance[0] = ENUCov(0, 0), dst_data.position_covariance[1] = ENUCov(0, 1), dst_data.position_covariance[2] = ENUCov(0, 2);
+        dst_data.position_covariance[3] = ENUCov(1, 0), dst_data.position_covariance[4] = ENUCov(1, 1), dst_data.position_covariance[5] = ENUCov(1, 2);
+        dst_data.position_covariance[6] = ENUCov(2, 0), dst_data.position_covariance[7] = ENUCov(2, 1), dst_data.position_covariance[8] = ENUCov(2, 2);
+
+        return true;
+    }
 
     /**
      * @brief       Convert GNSS solution data from IPS format to RobotGVINS format

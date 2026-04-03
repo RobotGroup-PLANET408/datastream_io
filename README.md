@@ -60,3 +60,4 @@ We are still working on improving the code reliability. For any technical issues
 * **2025.12.11** - The *(Version 1.1.9)*:  This version fix some problems of real-time stream. Thanks to the contribution of Gu shuo, Zhao jianhe and Lei weihao.
 * **2026.02.09** - The *(Version 1.2.0)*:  This version has optimized the configuration parameters and yaml files. Thanks to the contribution of Lei weihao.
 * **2026.02.10** - The *(Version 1.2.1)*:  This version can process real-time imu and image data from VisionRTK2. Thanks to the contribution of Zhao jianhe and Lei weihao.
+* **2026.04.03** - The *(Version 1.2.2)*:  This version can convert data format from VisionRTK2 to VINS-Fusion. Thanks to the contribution of Lei weihao.

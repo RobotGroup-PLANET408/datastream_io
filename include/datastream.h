@@ -182,7 +182,7 @@ namespace dataio_common
         std::string GNSSRoveObs_FilePath_Output = "\0";
         dataformat GNSSRoveObs_DataFormat_Input = dataformat::ROS_Format;
         dataformat GNSSRoveObs_DataFormat_Output = dataformat::ROS_Format;
-        int GNSSRoveObs_DecodeFormat = 0;
+        int GNSSRoveObs_DecodeFormat = -1;
         std::string GNSSRoveObs_Topic_Input = "\0";
         std::string GNSSRoveObs_Topic_Output = "\0";
 
@@ -191,7 +191,7 @@ namespace dataio_common
         std::string GNSSRoveNav_FilePath_Output = "\0";
         dataformat GNSSRoveNav_DataFormat_Input = dataformat::ROS_Format;
         dataformat GNSSRoveNav_DataFormat_Output = dataformat::ROS_Format;
-        int GNSSRoveNav_DecodeFormat = 0;
+        int GNSSRoveNav_DecodeFormat = -1;
         std::string GNSSRoveNav_Topic_Input = "\0";
         std::string GNSSRoveNav_Topic_Output = "\0";
 
@@ -200,7 +200,7 @@ namespace dataio_common
         std::string GNSSBaseObs_FilePath_Output = "\0";
         dataformat GNSSBaseObs_DataFormat_Input = dataformat::ROS_Format;
         dataformat GNSSBaseObs_DataFormat_Output = dataformat::ROS_Format;
-        int GNSSBaseObs_DecodeFormat = 0;
+        int GNSSBaseObs_DecodeFormat = -1;
         std::string GNSSBaseObs_Topic_Input = "\0";
         std::string GNSSBaseObs_Topic_Output = "\0";
 
@@ -209,7 +209,7 @@ namespace dataio_common
         std::string GNSSBaseNav_FilePath_Output = "\0";
         dataformat GNSSBaseNav_DataFormat_Input = dataformat::ROS_Format;
         dataformat GNSSBaseNav_DataFormat_Output = dataformat::ROS_Format;
-        int GNSSBaseNav_DecodeFormat = 0;
+        int GNSSBaseNav_DecodeFormat = -1;
         std::string GNSSBaseNav_Topic_Input = "\0";
         std::string GNSSBaseNav_Topic_Output = "\0";
 

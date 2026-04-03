@@ -1,0 +1,39 @@
+%YAML 1.2
+---
+
+## Output Data Filepath
+Output_Filepath: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal"    # The filepath to output VisionRTK.bag
+
+## Input Data Filepath
+# The filepath to extract raw rosbag
+ROSBag_FilePath: "/media/leiwh/WD_BLACK/01_Dataset/01_RobotGroup/01_Fixposition/2023-09-25/2023-09-25-03-01-32_maximal/rosbag"   # The filepath to extract raw rosbag
+ROSBag_FileName: 
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_0.bag
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_1.bag
+  - vrtk_6d9d0a_maximal_2023-09-25-03-01-32_2.bag
+
+# Imu
+# NOTE: The input and output filepath should be Null for rosbag file
+Imu_FilePath_Input: ""                                         # The filepath to extact Imu data
+Imu_FilePath_Output: ""                                        # The filepath to write Imu data
+Imu_DataFormat_Input: 0                                        # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+Imu_DataFormat_Output: 0                                       # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+Imu_Topic_Input: "/imu/data"                                   # Imu data topic to extract
+Imu_Topic_Output: "/VRTK2/imu/data"                            # Imu data topic to write
+
+# Image
+# NOTE: The input and output filepath should be Null for rosbag file
+Image_FilePath_Input: ""                                       # The filepath to extact Image data
+Image_FilePath_Output: ""                                      # The filepath to write Image data
+Image_DataFormat_Input: 0                                      # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+Image_DataFormat_Output: 0                                     # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+Image_Topic_Input: "/camera/lowres/image"                      # Image data topic to extract
+Image_Topic_Output: "/VRTK2/image/data"                        # Image data topic to write
+
+# GNSS Solution
+GNSSolution_FilePath_Input: "/home/leiwh/Research/Data/Fixposition/20230925/2023-09-25-03-01-32_maximal/result/R_RTK/gnss_data_1.pos" # The filepath to extact GNSS solution data
+GNSSolution_FilePath_Output: ""                                # The filepath to write GNSS solution data
+GNSSSol_DataFormat_Input: 6                                    # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSSol_DataFormat_Output: 0                                   # -1: None | 0: ROS | 1: VRTK01 | 2: VRTK02 | 3: KAIST | 4: RobotGVINS | 5: TUM | 6: IPS | 7: GICILIB
+GNSSSol_Topic_Input: ""                                        # The GNSS solution data topic to extract
+GNSSSol_Topic_Output: "/gnss/solution"                         # The GNSS solution data topic to write

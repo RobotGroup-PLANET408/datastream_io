@@ -160,6 +160,7 @@ namespace dataio_common
     template bool Write_ROSMessage_ROSBag<std::list<datastreamio::RobotGVINS_GNSSNav>>(rosbag::Bag &outfile_bag, const std::string msg_topic, const std::list<datastreamio::RobotGVINS_GNSSNav> &nav_data, const ros::Time start_time, const ros::Time end_time);
     template bool Write_ROSMessage_ROSBag<std::list<datastreamio::GICILIB_GnssObservations>>(rosbag::Bag &outfile_bag, const std::string msg_topic, const std::list<datastreamio::GICILIB_GnssObservations> &gnss_data, const ros::Time start_time, const ros::Time end_time);
     template bool Write_ROSMessage_ROSBag<std::list<datastreamio::GICILIB_GnssEphemerides>>(rosbag::Bag &outfile_bag, const std::string msg_topic, const std::list<datastreamio::GICILIB_GnssEphemerides> &eph_data, const ros::Time start_time, const ros::Time end_time);
+    template bool Write_ROSMessage_ROSBag<std::list<sensor_msgs::NavSatFix>>(rosbag::Bag &outfile_bag, const std::string msg_topic, const std::list<sensor_msgs::NavSatFix> &sol_data, const ros::Time start_time, const ros::Time end_time);
 
     /**
      * @brief       Write gnss ephemeris data to file as RINEX 3.x format
